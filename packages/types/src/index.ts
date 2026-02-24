@@ -1,12 +1,34 @@
 // Project
 
+export interface ProjectSettings {
+  spellCheck: boolean
+  paperMode: boolean
+  font: string
+  fontSize: number
+  wordsPerPage: number
+  showWordCount: boolean
+}
+
+export interface AuthorInfo {
+  firstName?: string
+  lastName?: string
+  phone?: string
+  email?: string
+}
+
 export interface Project {
   id: string
   title: string
+  subtitle?: string
   author: string
+  authorInfo?: AuthorInfo
   createdAt: string
   updatedAt: string
   sections: SectionManifestEntry[]
+  extras?: SectionManifestEntry[]      // Drawer sections; absent treated as []
+  frontMatter?: SectionManifestEntry[] // Front matter sections; absent treated as []
+  backMatter?: SectionManifestEntry[]  // Back matter sections; absent treated as []
+  settings?: ProjectSettings
 }
 
 // Sections
@@ -19,32 +41,63 @@ export interface SectionManifestEntry {
   children?: SectionManifestEntry[]  // only on type: 'group', one level deep
 }
 
-// Metadata
+// Reference
 
-export interface MetadataItem {
+export interface ReferenceItem {
   id: string
-  type: string            // 'character' | 'location' | 'timeline' | 'research' | custom
+  type: string            // 'character' | 'location' | 'timeline' | 'research' | 'notes' | 'scenes' | custom
   name: string
   fields: Record<string, string>
+  position: { x: number; y: number }  // board node position
   createdAt: string
   updatedAt: string
 }
 
-export interface MetadataCollection {
+export interface ReferenceManifestEntry {
+  id: string              // references a ReferenceItem.id or is a group ID
+  type: 'item' | 'group'
+  title?: string          // display name for groups; items use item.name
+  children?: ReferenceManifestEntry[]  // only on groups, one level deep
+}
+
+export interface BoardAnnotation {
+  id: string
+  kind: 'rectangle' | 'annotation'
+  position: { x: number; y: number }
+  size?: { width: number; height: number }  // rectangles
+  text: string
+  color?: string
+}
+
+export interface ReferenceEdge {
+  id: string
+  source: string
+  target: string
+  sourceHandle?: string
+  targetHandle?: string
+  label?: string
+}
+
+export interface ReferenceGraph {
+  edges: ReferenceEdge[]
+  annotations: BoardAnnotation[]
+}
+
+export interface ReferenceCollection {
   type: string
   label: string
   builtIn: boolean
-  fields: MetadataFieldDefinition[]
+  fields: ReferenceFieldDefinition[]
 }
 
-export interface MetadataFieldDefinition {
+export interface ReferenceFieldDefinition {
   key: string
   label: string
   inputType: 'text' | 'textarea'
 }
 
-export interface CollectionsManifest {
-  collections: MetadataCollection[]
+export interface ReferenceManifest {
+  collections: ReferenceCollection[]
 }
 
 // Writing log
@@ -64,4 +117,5 @@ export interface WritingLogEntry {
 export interface WritingLog {
   goals: WritingGoals
   log: WritingLogEntry[]
+  lastKnownTotal?: number   // total word count at end of last session; used to compute net session delta
 }
