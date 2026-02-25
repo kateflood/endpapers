@@ -5,11 +5,11 @@ import { useProject } from '../../contexts/ProjectContext'
 import SectionsSidebar from '../../components/SectionsSidebar/SectionsSidebar'
 import RichTextEditor from '../../components/RichTextEditor/RichTextEditor'
 import WritingGoalsPanel from '../../components/WritingGoalsPanel/WritingGoalsPanel'
-import { IconMenu, IconSettings } from '../../components/icons'
+import { IconMenu, IconSettings, IconHelpCircle } from '../../components/icons'
 
 export default function EditorScreen() {
   const navigate = useNavigate()
-  const { project, closeProject, sectionWordCounts, writingLog, sessionStartWords, updateGoals } = useProject()
+  const { project, recentId, closeProject, sectionWordCounts, writingLog, sessionStartWords, updateGoals } = useProject()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [goalsOpen, setGoalsOpen] = useState(false)
 
@@ -51,10 +51,10 @@ export default function EditorScreen() {
           <IconMenu size={16} />
         </button>
         <span
-          className="text-[0.9375rem] font-medium text-text flex-1 truncate cursor-pointer hover:opacity-70 transition-opacity"
+          className="text-[0.9375rem] font-serif text-text flex-1 truncate cursor-pointer hover:opacity-70 transition-opacity tracking-wide"
           onClick={() => { closeProject(); navigate('/') }}
         >
-          Endpapers
+          endpapers
         </span>
         {showWordCount && totalPages > 0 && (
           <button
@@ -78,6 +78,13 @@ export default function EditorScreen() {
           </button>
           <button
             className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+            onClick={() => navigate('/help')}
+            aria-label="Help"
+          >
+            <IconHelpCircle size={16} />
+          </button>
+          <button
+            className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
             onClick={() => navigate('/settings')}
             aria-label="Settings"
           >
@@ -85,6 +92,19 @@ export default function EditorScreen() {
           </button>
         </div>
       </header>
+
+      {/* Demo banner */}
+      {recentId === 'demo-project' && (
+        <div className="flex items-center justify-center px-4 h-8 bg-accent/[0.06] border-b border-border text-[0.8125rem] text-text-secondary shrink-0 gap-2">
+          <span>You are viewing the demo project.</span>
+          <button
+            className="text-accent hover:underline cursor-pointer"
+            onClick={() => { closeProject(); navigate('/') }}
+          >
+            Back to home
+          </button>
+        </div>
+      )}
 
       {/* Body */}
       <div className="flex-1 flex overflow-hidden">

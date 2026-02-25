@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="marble" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EBF8FF"/>
+      <stop offset="50%" stop-color="#BEE3F8"/>
+      <stop offset="100%" stop-color="#63B3ED"/>
+    </linearGradient>
+    <linearGradient id="pageWhite" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F0F7FF"/>
+    </linearGradient>
+    <linearGradient id="spineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2B6CB0"/>
+      <stop offset="100%" stop-color="#1A365D"/>
+    </linearGradient>
+  </defs>
+  <!-- Background — rounded for Electron/PWA, square for iOS App Store (Apple clips it) -->
+  <rect width="512" height="512" rx="112" fill="#1A365D"/>
+  <!-- Left page -->
+  <path d="M64 80 L232 80 L232 432 Q148 418 64 432 Z" fill="url(#pageWhite)" opacity="0.95"/>
+  <line x1="90" y1="138" x2="206" y2="138" stroke="#90CDF4" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  <line x1="90" y1="178" x2="206" y2="178" stroke="#90CDF4" stroke-width="6" stroke-linecap="round" opacity="0.55"/>
+  <line x1="90" y1="218" x2="164" y2="218" stroke="#90CDF4" stroke-width="6" stroke-linecap="round" opacity="0.55"/>
+  <line x1="90" y1="258" x2="206" y2="258" stroke="#90CDF4" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+  <line x1="90" y1="298" x2="142" y2="298" stroke="#90CDF4" stroke-width="6" stroke-linecap="round" opacity="0.4"/>
+  <line x1="90" y1="338" x2="192" y2="338" stroke="#90CDF4" stroke-width="6" stroke-linecap="round" opacity="0.4"/>
+  <line x1="90" y1="378" x2="170" y2="378" stroke="#90CDF4" stroke-width="6" stroke-linecap="round" opacity="0.35"/>
+  <!-- Right page marble -->
+  <path d="M254 80 L448 80 L448 432 Q351 418 254 432 Z" fill="url(#marble)"/>
+  <path d="M264 100 Q310 134 298 194 Q288 248 330 278 Q362 300 354 374" stroke="#2B6CB0" stroke-width="5" fill="none" opacity="0.55"/>
+  <path d="M282 96 Q332 132 318 196 Q306 252 350 282 Q382 304 374 378" stroke="#4299E1" stroke-width="4" fill="none" opacity="0.45"/>
+  <path d="M270 140 Q310 172 298 222 Q288 268 326 296 Q354 316 344 380" stroke="#90CDF4" stroke-width="3.5" fill="none" opacity="0.6"/>
+  <path d="M316 92 Q358 124 346 180 Q336 232 372 260 Q398 278 390 356" stroke="#2C5282" stroke-width="3" fill="none" opacity="0.3"/>
+  <path d="M260 180 Q296 210 286 256 Q278 298 314 324" stroke="#63B3ED" stroke-width="3" fill="none" opacity="0.5"/>
+  <!-- Spine -->
+  <rect x="232" y="80" width="22" height="352" fill="url(#spineGrad)" rx="2"/>
+</svg>

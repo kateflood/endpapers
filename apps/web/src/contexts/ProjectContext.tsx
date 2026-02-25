@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useRef, type ReactNode } from 'react'
 import type { Project, ProjectSettings, SectionManifestEntry, WritingLog, WritingGoals, AuthorInfo } from '@endpapers/types'
 import { writeProjectJson, writeWritingLog, readSectionFile } from '../fs/projectFs'
+import { DEMO_PROJECT, DEMO_WRITING_LOG } from '../demo/demoContent'
+import { createDemoHandle } from '../demo/memoryHandle'
 import { todayISODate, countWords } from '@endpapers/utils'
 import { useToast } from './ToastContext'
 
@@ -25,6 +27,7 @@ interface ProjectContextValue {
   updateProjectMeta: (patch: { title?: string; subtitle?: string; authorInfo?: AuthorInfo }) => Promise<void>
   updateSectionWordCount: (id: string, count: number) => void
   updateGoals: (goals: WritingGoals) => Promise<void>
+  openDemoProject: () => void
 }
 
 const EMPTY_LOG: WritingLog = { goals: {}, log: [] }
@@ -106,6 +109,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setSessionStartWords(0)
     writingLogRef.current = EMPTY_LOG
     handleRef.current = null
+  }
+
+  function openDemoProject() {
+    const demoHandle = createDemoHandle()
+    openProject(demoHandle, DEMO_PROJECT, 'demo-project', DEMO_WRITING_LOG)
   }
 
   // Debounced: 2 seconds after last word count change, flush delta to writing-log.json
@@ -223,6 +231,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         updateProjectMeta,
         updateSectionWordCount,
         updateGoals,
+        openDemoProject,
       }}
     >
       {children}

@@ -1,0 +1,8 @@
+export { default as logo } from './endpapers-logo.svg'
+export { default as logoFull } from './endpapers-logo-full.svg'
+export { default as logoFullWhite } from './endpapers-logo-full-white.svg'
+export { default as icon512 } from './endpapers-icon-512.svg'
+export { default as favicon32 } from './endpapers-favicon-32.svg'
+export { default as appleTouchIcon } from './endpapers-apple-touch-icon-180.svg'
+export { default as splashIcon } from './endpapers-splash-icon.svg'
+export { default as trayIcon } from './endpapers-tray-22.svg'

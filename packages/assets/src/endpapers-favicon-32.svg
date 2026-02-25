@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="marble" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EBF8FF"/>
+      <stop offset="50%" stop-color="#BEE3F8"/>
+      <stop offset="100%" stop-color="#63B3ED"/>
+    </linearGradient>
+    <linearGradient id="pageWhite" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F0F7FF"/>
+    </linearGradient>
+    <linearGradient id="spineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2B6CB0"/>
+      <stop offset="100%" stop-color="#1A365D"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="32" height="32" rx="5" fill="#1A365D"/>
+  <!-- Left page -->
+  <path d="M4 5 L14 5 L14 27 Q9 26 4 27 Z" fill="url(#pageWhite)" opacity="0.95"/>
+  <line x1="6" y1="10" x2="12" y2="10" stroke="#90CDF4" stroke-width="1" stroke-linecap="round" opacity="0.7"/>
+  <line x1="6" y1="14" x2="12" y2="14" stroke="#90CDF4" stroke-width="1" stroke-linecap="round" opacity="0.55"/>
+  <line x1="6" y1="18" x2="10" y2="18" stroke="#90CDF4" stroke-width="1" stroke-linecap="round" opacity="0.55"/>
+  <line x1="6" y1="22" x2="12" y2="22" stroke="#90CDF4" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+  <!-- Right page marble -->
+  <path d="M17 5 L28 5 L28 27 Q23 26 17 27 Z" fill="url(#marble)"/>
+  <path d="M18 7 Q23 12 21 18 Q19 23 24 26" stroke="#2B6CB0" stroke-width="1" fill="none" opacity="0.6"/>
+  <path d="M21 7 Q26 12 24 18 Q22 23 27 26" stroke="#4299E1" stroke-width="0.8" fill="none" opacity="0.45"/>
+  <!-- Spine -->
+  <rect x="14" y="5" width="3" height="22" fill="url(#spineGrad)" rx="0.5"/>
+</svg>

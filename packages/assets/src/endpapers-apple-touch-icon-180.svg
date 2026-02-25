@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <defs>
+    <linearGradient id="marble" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EBF8FF"/>
+      <stop offset="50%" stop-color="#BEE3F8"/>
+      <stop offset="100%" stop-color="#63B3ED"/>
+    </linearGradient>
+    <linearGradient id="pageWhite" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F0F7FF"/>
+    </linearGradient>
+    <linearGradient id="spineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2B6CB0"/>
+      <stop offset="100%" stop-color="#1A365D"/>
+    </linearGradient>
+  </defs>
+  <!-- Background — Apple applies corner radius automatically, no need to clip -->
+  <rect width="180" height="180" fill="#1A365D"/>
+  <!-- Left page -->
+  <path d="M22 28 L82 28 L82 152 Q52 145 22 152 Z" fill="url(#pageWhite)" opacity="0.95"/>
+  <line x1="32" y1="50" x2="72" y2="50" stroke="#90CDF4" stroke-width="2.2" stroke-linecap="round" opacity="0.7"/>
+  <line x1="32" y1="66" x2="72" y2="66" stroke="#90CDF4" stroke-width="2.2" stroke-linecap="round" opacity="0.55"/>
+  <line x1="32" y1="82" x2="58" y2="82" stroke="#90CDF4" stroke-width="2.2" stroke-linecap="round" opacity="0.55"/>
+  <line x1="32" y1="98" x2="72" y2="98" stroke="#90CDF4" stroke-width="2.2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="32" y1="114" x2="50" y2="114" stroke="#90CDF4" stroke-width="2.2" stroke-linecap="round" opacity="0.4"/>
+  <line x1="32" y1="130" x2="68" y2="130" stroke="#90CDF4" stroke-width="2.2" stroke-linecap="round" opacity="0.4"/>
+  <!-- Right page marble -->
+  <path d="M90 28 L158 28 L158 152 Q124 145 90 152 Z" fill="url(#marble)"/>
+  <path d="M95 36 Q114 52 109 74 Q104 94 122 108 Q136 118 132 142" stroke="#2B6CB0" stroke-width="2" fill="none" opacity="0.55"/>
+  <path d="M103 34 Q124 52 117 76 Q112 96 130 110 Q144 120 140 144" stroke="#4299E1" stroke-width="1.6" fill="none" opacity="0.45"/>
+  <path d="M98 52 Q114 66 110 86 Q106 104 122 116" stroke="#90CDF4" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <path d="M118 32 Q136 46 130 68 Q125 88 140 100 Q152 110 148 136" stroke="#2C5282" stroke-width="1.2" fill="none" opacity="0.3"/>
+  <!-- Spine -->
+  <rect x="82" y="28" width="8" height="124" fill="url(#spineGrad)" rx="1"/>
+</svg>

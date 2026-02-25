@@ -94,3 +94,31 @@ AI Features (first to ship):
 - Users can use it for proofreading, brainstorming, editing, etc.
 - Built on the bring-your-own-AI model — user's own API key, no backend proxying
 - Dedicated proofreading and research modes to be built on top of this foundation later
+
+
+Brand Navy (primary)
+
+#1A365D — deep navy, backgrounds, wordmark, spine dark
+
+Brand Blue (secondary)
+
+#2B6CB0 — spine, marble strokes, buttons
+#4299E1 — marble mid strokes, UI accents
+#63B3ED — marble light strokes, favicon fill
+
+Marble / Page Tints
+
+#90CDF4 — text lines, light marble strokes
+#BEE3F8 — page border, marble mid gradient
+#EBF8FF — marble light gradient start, light bg
+
+Page White
+
+#FFFFFF — page top
+#F0F7FF — page bottom (very slight blue tint)
+
+Utility
+
+#2C5282 — darkest marble accent stroke
+
+These all sit within the Tailwind blue scale if you're using Tailwind in your app, which makes things convenient — blue-900 through blue-100 maps almost exactly to this palette.

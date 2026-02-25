@@ -78,13 +78,15 @@ export default function RichTextEditor() {
     ],
     content: '',
     onUpdate: ({ editor: e }) => {
-      if (!handleRef.current || !activeFileRef.current) return
+      if (!activeFileRef.current) return
       const file = activeFileRef.current
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(() => {
-        writeSectionFile(handleRef.current!, file, e.getHTML())
-          .catch(() => showToast('Failed to save section.', 'error'))
-      }, 500)
+      if (handleRef.current) {
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+        debounceRef.current = setTimeout(() => {
+          writeSectionFile(handleRef.current!, file, e.getHTML())
+            .catch(() => showToast('Failed to save section.', 'error'))
+        }, 500)
+      }
       const text = e.getText()
       setCharCount(countCharacters(text))
       if (activeSectionIdRef.current) {
