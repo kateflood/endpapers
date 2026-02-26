@@ -23,7 +23,7 @@ export default function SettingsScreen() {
 
   const settings: ProjectSettings = {
     spellCheck: true,
-    paperMode: false,
+    paperMode: true,
     font: 'Inter, sans-serif',
     fontSize: 16,
     wordsPerPage: 250,

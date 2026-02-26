@@ -74,7 +74,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setHandle(newHandle)
     setProject(newProject)
     setRecentId(newRecentId)
-    setActiveSectionId(null)
+    // Auto-select the first section in the draft manifest
+    const firstSection = newProject.sections.length > 0
+      ? newProject.sections[0].type === 'section'
+        ? newProject.sections[0].id
+        : (newProject.sections[0].children?.[0]?.id ?? null)
+      : null
+    setActiveSectionId(firstSection)
     setSectionWordCounts({})
     setWritingLog(newWritingLog)
     setSessionStartWords(newWritingLog.lastKnownTotal ?? 0)

@@ -106,13 +106,26 @@ export async function createProjectStructure(
   title: string,
   author: string,
 ): Promise<Project> {
+  const sectionId = generateId()
+  const sectionFile = `${sectionId}.html`
+
   const project: Project = {
     id: generateId(),
     title,
     author,
     createdAt: todayISODate(),
     updatedAt: todayISODate(),
-    sections: [],
+    sections: [
+      { id: sectionId, title: 'Untitled Section', type: 'section', file: sectionFile },
+    ],
+    settings: {
+      spellCheck: true,
+      paperMode: true,
+      font: 'Inter, sans-serif',
+      fontSize: 16,
+      wordsPerPage: 250,
+      showWordCount: true,
+    },
   }
 
   const writingLog: WritingLog = { goals: {}, log: [] }
@@ -120,7 +133,12 @@ export async function createProjectStructure(
   await writeJson(handle, 'project.json', project)
   await writeJson(handle, 'writing-log.json', writingLog)
 
-  await handle.getDirectoryHandle('sections', { create: true })
+  const sectionsDir = await handle.getDirectoryHandle('sections', { create: true })
+  const sectionFileHandle = await sectionsDir.getFileHandle(sectionFile, { create: true })
+  const writable = await sectionFileHandle.createWritable()
+  await writable.write('')
+  await writable.close()
+
   const referenceDir = await handle.getDirectoryHandle('reference', { create: true })
   await writeJson(referenceDir, 'collections.json', BUILT_IN_COLLECTIONS)
   await writeJson(referenceDir, 'graph.json', { edges: [], annotations: [] } satisfies ReferenceGraph)
