@@ -15,6 +15,7 @@ import { useProject } from '../../contexts/ProjectContext'
 import { useToast } from '../../contexts/ToastContext'
 import { readSectionFile, writeSectionFile } from '../../fs/projectFs'
 import { SearchReplace } from './searchExtension'
+import { IconClose } from '../icons'
 import EditorToolbar from './EditorToolbar'
 import SearchBar from './SearchBar'
 
@@ -39,7 +40,12 @@ const DEFAULTS: ProjectSettings = {
   showWordCount: true,
 }
 
-export default function RichTextEditor() {
+interface RichTextEditorProps {
+  focusMode?: boolean
+  onExitFocus: () => void
+}
+
+export default function RichTextEditor({ focusMode = false, onExitFocus }: RichTextEditorProps) {
   const { project, handle, activeSectionId, sectionWordCounts, updateSectionWordCount } = useProject()
   const { showToast } = useToast()
   const settings: ProjectSettings = { ...DEFAULTS, ...project?.settings }
@@ -49,6 +55,23 @@ export default function RichTextEditor() {
   const [loading, setLoading] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [charCount, setCharCount] = useState(0)
+  const [exitBtnVisible, setExitBtnVisible] = useState(false)
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Show exit button on mouse movement in focus mode, hide after 2s of inactivity
+  useEffect(() => {
+    if (!focusMode) return
+    function onMouseMove() {
+      setExitBtnVisible(true)
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+      hideTimerRef.current = setTimeout(() => setExitBtnVisible(false), 2000)
+    }
+    document.addEventListener('mousemove', onMouseMove)
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+    }
+  }, [focusMode])
 
   // Refs so TipTap callbacks always have the current values (avoid stale closures)
   const handleRef = useRef(handle)
@@ -167,11 +190,21 @@ export default function RichTextEditor() {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {searchOpen && editor && (
+    <div className="flex-1 flex flex-col overflow-hidden relative">
+      {/* Focus mode exit button */}
+      {focusMode && (
+        <button
+          className={`focus-exit-btn absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-sm text-text-placeholder hover:text-text hover:bg-black/[0.06] transition-colors cursor-pointer${exitBtnVisible ? ' visible' : ''}`}
+          onClick={onExitFocus}
+          aria-label="Exit focus mode"
+        >
+          <IconClose size={16} />
+        </button>
+      )}
+      {!focusMode && searchOpen && editor && (
         <SearchBar editor={editor} onClose={closeSearch} />
       )}
-      {activeSectionId && (
+      {!focusMode && activeSectionId && (
         <EditorToolbar
           editor={editor}
           searchOpen={searchOpen}
@@ -180,7 +213,7 @@ export default function RichTextEditor() {
           defaultFontSize={fontSize}
         />
       )}
-      <div className={`flex-1 overflow-y-auto${settings.paperMode ? ' bg-bg py-10 px-6' : ''}`}>
+      <div className={`flex-1 overflow-y-auto${settings.paperMode && !focusMode ? ' bg-bg py-10 px-6' : ''}`}>
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-[0.9375rem] text-text-placeholder">Loading…</p>
@@ -191,7 +224,7 @@ export default function RichTextEditor() {
           </div>
         ) : (
           <div
-            className={settings.paperMode
+            className={settings.paperMode && !focusMode
               ? 'max-w-[680px] mx-auto bg-surface shadow-[0_2px_12px_rgba(0,0,0,0.08)] px-16 pt-16 pb-24 min-h-[900px]'
               : 'max-w-[680px] mx-auto px-12 py-10 min-h-full'
             }
@@ -202,7 +235,7 @@ export default function RichTextEditor() {
           </div>
         )}
       </div>
-      {activeSectionId && !loading && (
+      {!focusMode && activeSectionId && !loading && (
         <div className="shrink-0 border-t border-border h-7 flex items-center px-4 gap-4 text-[0.75rem] text-text-secondary bg-surface">
           {(() => {
             const words = sectionWordCounts[activeSectionId] ?? 0

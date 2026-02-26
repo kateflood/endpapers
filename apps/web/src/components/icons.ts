@@ -43,4 +43,5 @@ export {
   ArrowRight as IconArrowRight,
   FilePen as IconFilePen,
   Sparkles as IconSparkles,
+  Maximize as IconMaximize,
 } from 'lucide-react'

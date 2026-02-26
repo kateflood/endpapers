@@ -76,3 +76,12 @@
 .dark-hero-glow { background: radial-gradient(ellipse at 50% 0%, rgba(66, 153, 225, 0.15) 0%, transparent 70%); }
 .dark-privacy { background: linear-gradient(135deg, #1A365D 0%, #1e4a7a 100%); }
 .btn-cta { background: #4299E1; box-shadow: 0 4px 20px rgba(66, 153, 225, 0.35); }
+
+/* Focus mode exit button — fades in/out with mouse activity */
+.focus-exit-btn {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.focus-exit-btn.visible {
+  opacity: 1;
+}

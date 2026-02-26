@@ -14,6 +14,7 @@ const SHORTCUTS: Array<{ label: string; keys: string }> = [
   { label: 'Redo', keys: 'Cmd + Shift + Z' },
   { label: 'Find', keys: 'Cmd + F' },
   { label: 'Find and replace', keys: 'Cmd + Shift + F' },
+  { label: 'Focus mode', keys: 'Cmd + .' },
 ]
 
 export default function KeyboardShortcuts() {
