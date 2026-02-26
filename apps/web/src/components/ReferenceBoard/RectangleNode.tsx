@@ -69,7 +69,7 @@ function RectangleNode({ id, data, selected }: NodeProps<RectangleNodeType>) {
         </div>
         {selected && (
           <button
-            className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center text-[0.625rem] text-text-placeholder hover:text-red-500 transition-colors cursor-pointer"
+            className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center text-[0.625rem] text-text-placeholder hover:text-danger transition-colors cursor-pointer"
             onClick={() => data.onDelete(id)}
             title="Delete"
           >

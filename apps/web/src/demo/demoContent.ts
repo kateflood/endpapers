@@ -6,6 +6,7 @@ export const DEMO_PROJECT: Project = {
   id: 'demo-project',
   title: 'Goldilocks and the Three Bears',
   subtitle: 'A Classic Retelling',
+  type: 'fiction',
   author: 'Jane Author',
   authorInfo: {
     firstName: 'Jane',

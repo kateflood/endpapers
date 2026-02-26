@@ -1,5 +1,5 @@
 import { generateId, todayISODate } from '@endpapers/utils'
-import type { Project, WritingLog, ReferenceManifest, ReferenceItem, ReferenceGraph, ReferenceManifestEntry } from '@endpapers/types'
+import type { Project, ProjectType, WritingLog, ReferenceManifest, ReferenceItem, ReferenceGraph, ReferenceManifestEntry } from '@endpapers/types'
 
 export function isFileSystemAccessSupported(): boolean {
   return 'showDirectoryPicker' in window
@@ -105,6 +105,8 @@ export async function createProjectStructure(
   handle: FileSystemDirectoryHandle,
   title: string,
   author: string,
+  projectType: ProjectType = 'fiction',
+  customTypeLabel?: string,
 ): Promise<Project> {
   const sectionId = generateId()
   const sectionFile = `${sectionId}.html`
@@ -112,6 +114,8 @@ export async function createProjectStructure(
   const project: Project = {
     id: generateId(),
     title,
+    type: projectType,
+    ...(projectType === 'custom' && customTypeLabel ? { customTypeLabel } : {}),
     author,
     createdAt: todayISODate(),
     updatedAt: todayISODate(),

@@ -146,7 +146,7 @@ function ReferenceItemCard({
                 <div className="flex items-center gap-2">
                   <span className="text-[0.75rem] text-text-secondary flex-1">Delete?</span>
                   <button
-                    className="text-[0.75rem] px-2.5 h-7 rounded-sm bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer"
+                    className="text-[0.75rem] px-2.5 h-7 rounded-sm bg-danger text-white hover:opacity-80 transition-colors cursor-pointer"
                     onClick={e => { e.stopPropagation(); onDelete(item.id) }}
                   >
                     Delete
@@ -160,7 +160,7 @@ function ReferenceItemCard({
                 </div>
               ) : (
                 <button
-                  className="text-[0.75rem] text-text-placeholder hover:text-red-600 transition-colors cursor-pointer"
+                  className="text-[0.75rem] text-text-placeholder hover:text-danger transition-colors cursor-pointer"
                   onClick={e => { e.stopPropagation(); setConfirmDelete(true) }}
                 >
                   Delete item

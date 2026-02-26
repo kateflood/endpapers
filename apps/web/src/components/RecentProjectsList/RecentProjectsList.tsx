@@ -66,7 +66,7 @@ export default function RecentProjectsList({ recents, onRecentsChanged }: Props)
             </button>
           </div>
           {itemErrors[item.id] && (
-            <div className="text-[0.8125rem] text-red-700 px-4 py-2 bg-red-50 border-t border-border">
+            <div className="text-[0.8125rem] text-danger px-4 py-2 bg-danger-surface border-t border-border">
               {itemErrors[item.id]}
             </div>
           )}

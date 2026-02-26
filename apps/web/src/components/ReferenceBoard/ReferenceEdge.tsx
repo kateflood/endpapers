@@ -92,7 +92,7 @@ function ReferenceEdgeComponent({
           {confirmDelete ? (
             <>
               <button
-                className="text-[0.6875rem] px-1.5 py-0.5 rounded-sm bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer"
+                className="text-[0.6875rem] px-1.5 py-0.5 rounded-sm bg-danger text-white hover:opacity-80 transition-colors cursor-pointer"
                 onClick={e => { e.stopPropagation(); handleDelete() }}
               >
                 Delete
@@ -106,7 +106,7 @@ function ReferenceEdgeComponent({
             </>
           ) : (
             <button
-              className="text-[0.6875rem] px-1.5 py-0.5 rounded-sm text-text-secondary hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+              className="text-[0.6875rem] px-1.5 py-0.5 rounded-sm text-text-secondary hover:text-danger hover:bg-danger-surface transition-colors cursor-pointer"
               onClick={e => { e.stopPropagation(); setConfirmDelete(true) }}
               title="Delete connection"
             >

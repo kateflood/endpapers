@@ -39,7 +39,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               key={toast.id}
               className={`flex items-start gap-2 px-4 py-3 rounded-md shadow-lg border text-[0.8125rem] animate-[fadeIn_0.15s_ease-out] ${
                 toast.type === 'error'
-                  ? 'bg-red-50 border-red-200 text-red-800'
+                  ? 'bg-danger-surface border-danger-border text-danger'
                   : 'bg-surface border-border text-text'
               }`}
             >

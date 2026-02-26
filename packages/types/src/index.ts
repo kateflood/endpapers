@@ -1,5 +1,7 @@
 // Project
 
+export type ProjectType = 'fiction' | 'non-fiction' | 'stories' | 'essays' | 'article' | 'script' | 'custom'
+
 export interface ProjectSettings {
   spellCheck: boolean
   paperMode: boolean
@@ -21,6 +23,8 @@ export interface Project {
   id: string
   title: string
   subtitle?: string
+  type?: ProjectType          // absent treated as 'fiction'
+  customTypeLabel?: string    // display label when type is 'custom'
   author: string
   authorInfo?: AuthorInfo
   createdAt: string

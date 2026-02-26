@@ -11,6 +11,7 @@ import {
   readProjectJson,
   readWritingLog,
 } from '../../fs/projectFs'
+import type { ProjectType } from '@endpapers/types'
 import NewProjectDialog from '../../components/NewProjectDialog/NewProjectDialog'
 import RecentProjectsList from '../../components/RecentProjectsList/RecentProjectsList'
 import FeatureShowcase from '../../components/FeatureShowcase/FeatureShowcase'
@@ -35,14 +36,14 @@ export default function HomeScreen() {
     loadRecents()
   }, [loadRecents])
 
-  async function handleNewProject(title: string) {
+  async function handleNewProject(title: string, type: ProjectType, customTypeLabel?: string) {
     setShowDialog(false)
     setIsBusy(true)
     setError(null)
     try {
       const handle = await pickDirectory()
       if (!handle) return
-      const project = await createProjectStructure(handle, title, '')
+      const project = await createProjectStructure(handle, title, '', type, customTypeLabel)
       const recent: RecentProject = {
         id: project.id,
         handle,
@@ -357,7 +358,7 @@ export default function HomeScreen() {
 
       {showDialog && (
         <NewProjectDialog
-          onConfirm={title => { void handleNewProject(title) }}
+          onConfirm={(title, type, customTypeLabel) => { void handleNewProject(title, type, customTypeLabel) }}
           onCancel={() => setShowDialog(false)}
         />
       )}

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useRef, type ReactNode } from 'react'
-import type { Project, ProjectSettings, SectionManifestEntry, WritingLog, WritingGoals, AuthorInfo } from '@endpapers/types'
+import type { Project, ProjectType, ProjectSettings, SectionManifestEntry, WritingLog, WritingGoals, AuthorInfo } from '@endpapers/types'
 import { writeProjectJson, writeWritingLog, readSectionFile } from '../fs/projectFs'
 import { DEMO_PROJECT, DEMO_WRITING_LOG } from '../demo/demoContent'
 import { createDemoHandle } from '../demo/memoryHandle'
@@ -24,7 +24,7 @@ interface ProjectContextValue {
   updateBackMatter: (backMatter: SectionManifestEntry[]) => Promise<void>
   updateAllManifests: (sections: SectionManifestEntry[], extras: SectionManifestEntry[], frontMatter: SectionManifestEntry[], backMatter: SectionManifestEntry[]) => Promise<void>
   updateSettings: (settings: ProjectSettings) => Promise<void>
-  updateProjectMeta: (patch: { title?: string; subtitle?: string; authorInfo?: AuthorInfo }) => Promise<void>
+  updateProjectMeta: (patch: { title?: string; subtitle?: string; type?: ProjectType; customTypeLabel?: string; authorInfo?: AuthorInfo }) => Promise<void>
   updateSectionWordCount: (id: string, count: number) => void
   updateGoals: (goals: WritingGoals) => Promise<void>
   openDemoProject: () => void
@@ -196,7 +196,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     await saveProject({ ...project, settings, updatedAt: todayISODate() })
   }
 
-  async function updateProjectMeta(patch: { title?: string; subtitle?: string; authorInfo?: AuthorInfo }) {
+  async function updateProjectMeta(patch: { title?: string; subtitle?: string; type?: ProjectType; customTypeLabel?: string; authorInfo?: AuthorInfo }) {
     if (!project || !handle) return
     await saveProject({ ...project, ...patch, updatedAt: todayISODate() })
   }

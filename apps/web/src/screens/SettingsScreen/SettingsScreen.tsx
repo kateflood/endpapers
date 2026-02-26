@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProject } from '../../contexts/ProjectContext'
-import type { ProjectSettings, AuthorInfo } from '@endpapers/types'
+import type { ProjectSettings, ProjectType, AuthorInfo } from '@endpapers/types'
 import { FONTS, FONT_SIZES } from '../../components/RichTextEditor/EditorToolbar'
+import { PROJECT_TYPES } from '../../components/NewProjectDialog/NewProjectDialog'
 import { IconArrowLeft } from '../../components/icons'
 import ImportDialog from '../../components/ImportDialog/ImportDialog'
 import ExportDialog from '../../components/ExportDialog/ExportDialog'
@@ -70,6 +71,21 @@ export default function SettingsScreen() {
                 placeholder="Optional"
                 onSave={v => updateProjectMeta({ subtitle: v || undefined })}
               />
+              <SettingSelectRow
+                label="Type"
+                description="The kind of writing this project contains."
+                value={project.type ?? 'fiction'}
+                options={PROJECT_TYPES.map(t => ({ label: t.label, value: t.value }))}
+                onChange={v => updateProjectMeta({ type: v as ProjectType, ...(v !== 'custom' ? { customTypeLabel: undefined } : {}) })}
+              />
+              {(project.type ?? 'fiction') === 'custom' && (
+                <SettingTextRow
+                  label="Custom type label"
+                  value={project.customTypeLabel ?? ''}
+                  placeholder="e.g. Screenplay"
+                  onSave={v => updateProjectMeta({ customTypeLabel: v || undefined })}
+                />
+              )}
             </div>
           </section>
 
