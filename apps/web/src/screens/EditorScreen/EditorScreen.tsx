@@ -73,12 +73,12 @@ export default function EditorScreen() {
   if (!project) return null
 
   return (
-    <div className={`h-screen flex flex-col overflow-hidden${focusMode ? ' focus-mode-active' : ''}`}>
+    <div className={`h-screen flex flex-col overflow-hidden bg-bg text-text${focusMode ? ' focus-mode-active' : ''}${project.settings?.darkMode ? ' dark' : ''}`}>
       {/* Header */}
       {!focusMode && (
         <header className="flex items-center px-4 h-12 border-b border-border bg-surface shrink-0 gap-3">
           <button
-            className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+            className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
             onClick={() => setSidebarOpen(o => !o)}
             aria-label="Toggle sections sidebar"
           >
@@ -94,8 +94,8 @@ export default function EditorScreen() {
             <button
               className={`text-[0.8125rem] shrink-0 px-2 h-7 rounded-sm transition-colors cursor-pointer ${
                 goalsOpen
-                  ? 'text-text bg-black/[0.06]'
-                  : 'text-text-secondary hover:text-text hover:bg-black/[0.04]'
+                  ? 'text-text bg-active'
+                  : 'text-text-secondary hover:text-text hover:bg-hover'
               }`}
               onClick={() => setGoalsOpen(o => !o)}
               aria-label="Writing goals"
@@ -105,13 +105,13 @@ export default function EditorScreen() {
           )}
           <div className="flex items-center gap-1">
             <button
-              className="px-3 h-7 rounded-sm text-[0.8125rem] text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+              className="px-3 h-7 rounded-sm text-[0.8125rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
               onClick={() => navigate('/reference')}
             >
               Reference
             </button>
             <button
-              className={`w-8 h-8 flex items-center justify-center rounded-sm transition-colors ${activeSectionId ? 'text-text-secondary hover:text-text hover:bg-black/[0.04] cursor-pointer' : 'text-text-placeholder cursor-default'}`}
+              className={`w-8 h-8 flex items-center justify-center rounded-sm transition-colors ${activeSectionId ? 'text-text-secondary hover:text-text hover:bg-hover cursor-pointer' : 'text-text-placeholder cursor-default'}`}
               onClick={() => { if (activeSectionId) setFocusMode(true) }}
               aria-label="Focus mode"
               disabled={!activeSectionId}
@@ -119,14 +119,14 @@ export default function EditorScreen() {
               <IconMaximize size={16} />
             </button>
             <button
-              className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+              className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
               onClick={() => navigate('/help')}
               aria-label="Help"
             >
               <IconHelpCircle size={16} />
             </button>
             <button
-              className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+              className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
               onClick={() => navigate('/settings')}
               aria-label="Settings"
             >

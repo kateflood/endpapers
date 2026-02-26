@@ -235,11 +235,11 @@ export default function ReferenceScreen() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className={`h-screen flex flex-col overflow-hidden bg-bg text-text${project?.settings?.darkMode ? ' dark' : ''}`}>
       {/* Header */}
       <header className="flex items-center px-4 h-12 border-b border-border bg-surface shrink-0 gap-3">
         <button
-          className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+          className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
           onClick={() => navigate('/editor')}
           aria-label="Back to editor"
         >
@@ -254,8 +254,8 @@ export default function ReferenceScreen() {
           <button
             className={`px-3 h-7 rounded-sm text-[0.8125rem] transition-colors cursor-pointer ${
               activeTab === 'board'
-                ? 'text-text bg-black/[0.06]'
-                : 'text-text-secondary hover:text-text hover:bg-black/[0.04]'
+                ? 'text-text bg-active'
+                : 'text-text-secondary hover:text-text hover:bg-hover'
             }`}
             onClick={() => setActiveTab('board')}
           >
@@ -264,8 +264,8 @@ export default function ReferenceScreen() {
           <button
             className={`px-3 h-7 rounded-sm text-[0.8125rem] transition-colors cursor-pointer ${
               activeTab === 'grid'
-                ? 'text-text bg-black/[0.06]'
-                : 'text-text-secondary hover:text-text hover:bg-black/[0.04]'
+                ? 'text-text bg-active'
+                : 'text-text-secondary hover:text-text hover:bg-hover'
             }`}
             onClick={() => setActiveTab('grid')}
           >

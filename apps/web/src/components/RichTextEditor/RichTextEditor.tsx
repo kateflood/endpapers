@@ -34,6 +34,7 @@ function findSectionFile(sections: SectionManifestEntry[], id: string): string |
 const DEFAULTS: ProjectSettings = {
   spellCheck: true,
   paperMode: true,
+  darkMode: false,
   font: 'Inter, sans-serif',
   fontSize: 16,
   wordsPerPage: 250,
@@ -194,7 +195,7 @@ export default function RichTextEditor({ focusMode = false, onExitFocus }: RichT
       {/* Focus mode exit button */}
       {focusMode && (
         <button
-          className={`focus-exit-btn absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-sm text-text-placeholder hover:text-text hover:bg-black/[0.06] transition-colors cursor-pointer${exitBtnVisible ? ' visible' : ''}`}
+          className={`focus-exit-btn absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-sm text-text-placeholder hover:text-text hover:bg-hover transition-colors cursor-pointer${exitBtnVisible ? ' visible' : ''}`}
           onClick={onExitFocus}
           aria-label="Exit focus mode"
         >

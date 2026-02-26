@@ -63,8 +63,8 @@ function SortableItemRow({ item, isSelected, onSelect, onRename, onDelete, inden
       style={style}
       className={`group flex items-center gap-1 ${indent ? 'pl-9' : 'pl-5'} pr-1 h-7 cursor-pointer transition-colors text-[0.8125rem] ${
         isSelected
-          ? 'text-text bg-black/[0.06]'
-          : 'text-text-secondary hover:bg-black/[0.03] hover:text-text'
+          ? 'text-text bg-active'
+          : 'text-text-secondary hover:bg-hover hover:text-text'
       }`}
       onClick={() => onSelect(item.id)}
     >
@@ -148,7 +148,7 @@ function SortableGroupRow({ entry, items, selectedItemId, onSelectItem, onRename
   return (
     <div ref={setNodeRef} style={style}>
       <div
-        className={`group flex items-center px-2 h-8 cursor-pointer transition-colors hover:bg-black/[0.03]`}
+        className={`group flex items-center px-2 h-8 cursor-pointer transition-colors hover:bg-hover`}
       >
         <DragHandle attributes={attributes} listeners={listeners} />
         <button
@@ -369,14 +369,14 @@ export default function ReferenceSidebar({
                   {col.label}
                 </span>
                 <button
-                  className="h-6 px-1.5 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+                  className="h-6 px-1.5 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
                   onClick={e => { e.stopPropagation(); onAdd(col.type) }}
                   title={`Add ${col.label.replace(/s$/, '').toLowerCase()}`}
                 >
                   + Item
                 </button>
                 <button
-                  className="h-6 px-1.5 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+                  className="h-6 px-1.5 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
                   onClick={e => { e.stopPropagation(); handleCreateGroup(col.type) }}
                   title={`Add group to ${col.label.toLowerCase()}`}
                 >

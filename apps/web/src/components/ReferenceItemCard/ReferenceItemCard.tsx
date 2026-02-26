@@ -89,7 +89,7 @@ function ReferenceItemCard({
                 {collection?.label.replace(/s$/, '') ?? item.type}
               </span>
               <button
-                className="w-6 h-6 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+                className="w-6 h-6 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
                 onClick={e => { e.stopPropagation(); onToggleExpand?.() }}
                 aria-label="Collapse"
               >
@@ -152,7 +152,7 @@ function ReferenceItemCard({
                     Delete
                   </button>
                   <button
-                    className="text-[0.75rem] px-2.5 h-7 rounded-sm text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+                    className="text-[0.75rem] px-2.5 h-7 rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
                     onClick={e => { e.stopPropagation(); setConfirmDelete(false) }}
                   >
                     Cancel

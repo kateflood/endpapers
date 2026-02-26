@@ -3,6 +3,7 @@
 export interface ProjectSettings {
   spellCheck: boolean
   paperMode: boolean
+  darkMode: boolean
   font: string
   fontSize: number
   wordsPerPage: number

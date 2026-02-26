@@ -182,7 +182,7 @@ export default function ImportDialog({ onClose }: Props) {
               onChange={handleFileChange}
             />
             <button
-              className="px-3 h-7 rounded-sm text-[0.8125rem] border border-border text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer shrink-0"
+              className="px-3 h-7 rounded-sm text-[0.8125rem] border border-border text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer shrink-0"
               onClick={() => fileInputRef.current?.click()}
             >
               Choose…
@@ -243,7 +243,7 @@ export default function ImportDialog({ onClose }: Props) {
       {/* Footer */}
       <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border shrink-0">
         <button
-          className="px-3 h-8 rounded-sm text-[0.8125rem] text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+          className="px-3 h-8 rounded-sm text-[0.8125rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
           onClick={onClose}
         >
           Cancel

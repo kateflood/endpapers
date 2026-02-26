@@ -418,7 +418,7 @@ export default function SectionsSidebar() {
           {label}
         </span>
         <button
-          className="h-6 px-1.5 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+          className="h-6 px-1.5 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
           onClick={() => { void handleAddSection(zone) }}
           title={`Add section to ${label}`}
         >
@@ -426,7 +426,7 @@ export default function SectionsSidebar() {
         </button>
         {allowGroups && (
           <button
-            className="h-6 px-1.5 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+            className="h-6 px-1.5 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
             onClick={() => { void handleAddGroup(zone as 'draft' | 'drawer') }}
             title={`Add group to ${label}`}
           >

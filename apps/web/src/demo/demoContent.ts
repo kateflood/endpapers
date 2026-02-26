@@ -43,6 +43,7 @@ export const DEMO_PROJECT: Project = {
   settings: {
     spellCheck: true,
     paperMode: true,
+    darkMode: false,
     font: 'Georgia',
     fontSize: 18,
     wordsPerPage: 250,

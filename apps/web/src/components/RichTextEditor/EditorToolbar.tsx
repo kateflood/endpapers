@@ -45,9 +45,9 @@ export default function EditorToolbar({
   if (!editor) return null
 
   const btnBase = 'w-7 h-7 flex items-center justify-center rounded-sm cursor-pointer transition-colors shrink-0'
-  const btnActive = 'bg-black/[0.08] text-text'
-  const btnInactive = 'text-text-secondary hover:bg-black/[0.04] hover:text-text'
-  const selectClass = 'h-7 px-1.5 rounded-sm text-[0.875rem] text-text bg-transparent border-none outline-none cursor-pointer hover:bg-black/[0.04] transition-colors shrink-0'
+  const btnActive = 'bg-active text-text'
+  const btnInactive = 'text-text-secondary hover:bg-hover hover:text-text'
+  const selectClass = 'h-7 px-1.5 rounded-sm text-[0.875rem] text-text bg-transparent border-none outline-none cursor-pointer hover:bg-hover transition-colors shrink-0'
   const sep = <div className="w-px h-4 bg-border mx-1 shrink-0" />
 
   function iconBtn(icon: React.ReactNode, isActive: boolean, onClick: () => void, tooltip: string) {

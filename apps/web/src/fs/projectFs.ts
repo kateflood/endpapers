@@ -121,6 +121,7 @@ export async function createProjectStructure(
     settings: {
       spellCheck: true,
       paperMode: true,
+      darkMode: false,
       font: 'Inter, sans-serif',
       fontSize: 16,
       wordsPerPage: 250,

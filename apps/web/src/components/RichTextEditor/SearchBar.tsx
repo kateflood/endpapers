@@ -49,7 +49,7 @@ export default function SearchBar({ editor, onClose }: Props) {
   }
 
   const inputClass = 'h-7 px-2 text-[0.8125rem] bg-bg border border-border rounded-sm outline-none focus:border-accent w-40 text-text'
-  const btnClass = 'h-7 px-2 rounded-sm text-[0.8125rem] text-text-secondary hover:bg-black/[0.04] hover:text-text cursor-pointer transition-colors'
+  const btnClass = 'h-7 px-2 rounded-sm text-[0.8125rem] text-text-secondary hover:bg-hover hover:text-text cursor-pointer transition-colors'
 
   const matchLabel = findTerm
     ? matchCount === 0

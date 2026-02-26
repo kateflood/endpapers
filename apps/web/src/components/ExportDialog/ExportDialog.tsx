@@ -459,7 +459,7 @@ export default function ExportDialog({ onClose }: Props) {
 
           <div className="flex items-center px-4 py-3 border-t border-border shrink-0">
             <button
-              className="px-3 h-8 rounded-sm text-[0.8125rem] text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+              className="px-3 h-8 rounded-sm text-[0.8125rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
               onClick={() => setStep('preview')}
             >
               Preview
@@ -467,7 +467,7 @@ export default function ExportDialog({ onClose }: Props) {
             <div className="flex-1" />
             <div className="flex items-center gap-2">
               <button
-                className="px-3 h-8 rounded-sm text-[0.8125rem] text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+                className="px-3 h-8 rounded-sm text-[0.8125rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
                 onClick={onClose}
               >
                 Cancel
@@ -494,8 +494,8 @@ export default function ExportDialog({ onClose }: Props) {
                 key={opt.value}
                 className={`px-2.5 h-7 rounded-sm text-[0.8125rem] transition-colors cursor-pointer ${
                   format === opt.value
-                    ? 'text-text bg-black/[0.06]'
-                    : 'text-text-secondary hover:text-text hover:bg-black/[0.04]'
+                    ? 'text-text bg-active'
+                    : 'text-text-secondary hover:text-text hover:bg-hover'
                 }`}
                 onClick={() => setFormat(opt.value)}
               >
@@ -530,7 +530,7 @@ export default function ExportDialog({ onClose }: Props) {
 
           <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border shrink-0">
             <button
-              className="px-3 h-8 rounded-sm text-[0.8125rem] text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+              className="px-3 h-8 rounded-sm text-[0.8125rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
               onClick={() => { setStep('options'); setPreviewHtml(null) }}
             >
               Back

@@ -559,14 +559,14 @@ export default function ReferenceBoardView({
         </div>
         <div className="w-px h-5 bg-border" />
         <button
-          className="flex items-center gap-1 px-2 h-7 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+          className="flex items-center gap-1 px-2 h-7 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
           onClick={() => handleAddAnnotation('rectangle')}
           title="Add rectangle"
         >
           <IconSquare size={14} />
         </button>
         <button
-          className="flex items-center gap-1 px-2 h-7 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+          className="flex items-center gap-1 px-2 h-7 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
           onClick={() => handleAddAnnotation('annotation')}
           title="Add note"
         >

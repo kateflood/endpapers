@@ -31,7 +31,7 @@ export default function HelpScreen() {
     <div className="h-screen flex flex-col overflow-hidden">
       <header className="flex items-center px-4 h-12 border-b border-border bg-surface shrink-0 gap-3">
         <button
-          className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+          className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
           onClick={() => navigate('/')}
           aria-label="Back to home"
         >

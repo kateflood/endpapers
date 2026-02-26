@@ -8,6 +8,11 @@
   --color-text-placeholder: #A0AEC0;
   --color-border: #E2E8F0;
   --color-accent: #2B6CB0;
+  --color-hover: rgba(0, 0, 0, 0.04);
+  --color-active: rgba(0, 0, 0, 0.07);
+  --color-danger: #dc2626;
+  --color-danger-surface: #fef2f2;
+  --color-danger-border: #fecaca;
   --color-navy: #1A365D;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-serif: 'Georgia', 'Times New Roman', serif;
@@ -85,3 +90,21 @@
 .focus-exit-btn.visible {
   opacity: 1;
 }
+
+/* Dark theme overrides — applied when .dark class is on a screen wrapper */
+.dark {
+  --color-bg: #1a1d21;
+  --color-surface: #23272e;
+  --color-text: #d4d7dc;
+  --color-text-secondary: #8e9297;
+  --color-text-placeholder: #5c6066;
+  --color-border: #36393f;
+  --color-accent: #5b9bd5;
+  --color-hover: rgba(255, 255, 255, 0.07);
+  --color-active: rgba(255, 255, 255, 0.12);
+  --color-danger: #f87171;
+  --color-danger-surface: rgba(220, 38, 38, 0.12);
+  --color-danger-border: rgba(220, 38, 38, 0.25);
+}
+.dark .search-match { background-color: #5c4d00; }
+.dark .search-current { background-color: #7a5500; }

@@ -9,7 +9,7 @@ export default function Button({ variant = 'primary', className = '', ...props }
     primary:
       'bg-accent text-white border border-accent transition-opacity enabled:hover:opacity-[0.82]',
     ghost:
-      'bg-transparent text-text border border-border transition-[border-color,background] enabled:hover:border-text-secondary enabled:hover:bg-black/[0.02]',
+      'bg-transparent text-text border border-border transition-[border-color,background] enabled:hover:border-text-secondary enabled:hover:bg-hover',
   }
   return <button className={`${base} ${variants[variant]} ${className}`} {...props} />
 }

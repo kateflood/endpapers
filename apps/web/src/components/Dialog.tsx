@@ -22,7 +22,7 @@ export default function Dialog({ title, width = 'max-w-[400px]', onClose, childr
         <div className="flex items-center px-4 h-12 border-b border-border shrink-0 gap-2">
           <span className="flex-1 text-[0.9375rem] font-medium text-text">{title}</span>
           <button
-            className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+            className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
             onClick={onClose}
             aria-label="Close"
           >

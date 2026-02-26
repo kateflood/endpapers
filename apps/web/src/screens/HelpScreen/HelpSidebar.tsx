@@ -16,8 +16,8 @@ export default function HelpSidebar({ activeTopic }: Props) {
             key={slug}
             className={`text-left px-3 py-1.5 rounded-sm text-[0.8125rem] transition-colors cursor-pointer ${
               slug === activeTopic
-                ? 'text-text bg-black/[0.06] font-medium'
-                : 'text-text-secondary hover:text-text hover:bg-black/[0.03]'
+                ? 'text-text bg-active font-medium'
+                : 'text-text-secondary hover:text-text hover:bg-hover'
             }`}
             onClick={() => navigate(`/help/${slug}`)}
           >

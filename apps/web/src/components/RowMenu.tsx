@@ -29,7 +29,7 @@ export default function RowMenu({ items, label = 'Options' }: Props) {
   return (
     <div className="relative" ref={menuRef}>
       <button
-        className="shrink-0 w-5 h-5 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-black/[0.06] opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[0.75rem] leading-none"
+        className="shrink-0 w-5 h-5 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-hover opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[0.75rem] leading-none"
         onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
         aria-label={label}
       >
@@ -40,7 +40,7 @@ export default function RowMenu({ items, label = 'Options' }: Props) {
           {items.map(item => (
             <button
               key={item.label}
-              className={`w-full text-left px-3 py-1.5 text-[0.8125rem] hover:bg-black/[0.04] cursor-pointer ${item.variant === 'danger' ? 'text-red-600' : 'text-text'}`}
+              className={`w-full text-left px-3 py-1.5 text-[0.8125rem] hover:bg-hover cursor-pointer ${item.variant === 'danger' ? 'text-danger' : 'text-text'}`}
               onClick={e => { e.stopPropagation(); setOpen(false); item.onClick() }}
             >
               {item.label}

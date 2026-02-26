@@ -91,7 +91,7 @@ export default function GroupItem({
   return (
     <div ref={setNodeRef} style={style}>
       {/* Group header row */}
-      <div className="group relative flex items-center h-8 gap-1 pl-2 pr-2 cursor-pointer select-none hover:bg-black/[0.03]">
+      <div className="group relative flex items-center h-8 gap-1 pl-2 pr-2 cursor-pointer select-none hover:bg-hover">
         <DragHandle attributes={attributes} listeners={listeners} />
 
         {/* Chevron */}

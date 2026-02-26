@@ -11,7 +11,7 @@ const FEATURES: { icon: typeof IconLayers; title: string; description: string; i
   {
     icon: IconFilePen,
     title: 'Distraction-Free Editor',
-    description: 'A clean writing environment that gets out of your way. Focus mode, customizable typography, and rich formatting.',
+    description: 'A clean writing environment that gets out of your way. Focus mode, dark mode, customizable typography, and rich formatting.',
     iconBg: '#EBF8FF',
     iconColor: '#2B6CB0',
   },

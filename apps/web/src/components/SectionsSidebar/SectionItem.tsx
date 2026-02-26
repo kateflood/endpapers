@@ -70,7 +70,7 @@ export default function SectionItem({
   return (
     <div ref={setNodeRef} style={style}>
       <div
-        className={`group relative flex items-center h-7 gap-1 ${indented ? 'pl-7' : 'pl-2'} pr-2 cursor-pointer select-none ${isActive ? 'bg-black/[0.06]' : 'hover:bg-black/[0.03]'}`}
+        className={`group relative flex items-center h-7 gap-1 ${indented ? 'pl-7' : 'pl-2'} pr-2 cursor-pointer select-none ${isActive ? 'bg-active' : 'hover:bg-hover'}`}
         onClick={() => { if (!editing) onSelect(section.id) }}
         onDoubleClick={() => startEditing()}
       >

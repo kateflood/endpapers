@@ -98,7 +98,7 @@ function ReferenceEdgeComponent({
                 Delete
               </button>
               <button
-                className="text-[0.6875rem] px-1.5 py-0.5 rounded-sm text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+                className="text-[0.6875rem] px-1.5 py-0.5 rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
                 onClick={e => { e.stopPropagation(); setConfirmDelete(false) }}
               >
                 Cancel

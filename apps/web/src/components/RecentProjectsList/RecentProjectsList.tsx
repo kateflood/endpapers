@@ -48,7 +48,7 @@ export default function RecentProjectsList({ recents, onRecentsChanged }: Props)
       {recents.map(item => (
         <li key={item.id} className="border-b border-border last:border-b-0">
           <div
-            className="group flex items-center gap-2 px-4 py-3.5 cursor-pointer transition-colors hover:bg-black/[0.02]"
+            className="group flex items-center gap-2 px-4 py-3.5 cursor-pointer transition-colors hover:bg-hover"
             onClick={() => { void handleOpen(item) }}
           >
             <div className="flex-1 min-w-0">

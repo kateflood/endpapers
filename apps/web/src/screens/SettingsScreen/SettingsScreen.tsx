@@ -24,6 +24,7 @@ export default function SettingsScreen() {
   const settings: ProjectSettings = {
     spellCheck: true,
     paperMode: true,
+    darkMode: false,
     font: 'Inter, sans-serif',
     fontSize: 16,
     wordsPerPage: 250,
@@ -36,10 +37,10 @@ export default function SettingsScreen() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className={`h-screen flex flex-col overflow-hidden bg-bg text-text${settings.darkMode ? ' dark' : ''}`}>
       <header className="flex items-center px-4 h-12 border-b border-border bg-surface shrink-0 gap-3">
         <button
-          className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer"
+          className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
           onClick={() => navigate('/editor')}
           aria-label="Back to editor"
         >
@@ -129,6 +130,12 @@ export default function SettingsScreen() {
                 onChange={v => handleUpdate({ paperMode: v })}
               />
               <SettingRow
+                label="Dark mode"
+                description="Use a dark color scheme for the editor."
+                checked={settings.darkMode}
+                onChange={v => handleUpdate({ darkMode: v })}
+              />
+              <SettingRow
                 label="Spell check"
                 description="Underline misspelled words while writing."
                 checked={settings.spellCheck}
@@ -152,7 +159,7 @@ export default function SettingsScreen() {
                   <div className="text-[0.8125rem] text-text-secondary mt-0.5">Import .txt or .md files as new sections.</div>
                 </div>
                 <button
-                  className="px-3 h-7 rounded-sm text-[0.8125rem] border border-border text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer shrink-0 ml-6"
+                  className="px-3 h-7 rounded-sm text-[0.8125rem] border border-border text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer shrink-0 ml-6"
                   onClick={() => setImportOpen(true)}
                 >
                   Import…
@@ -164,7 +171,7 @@ export default function SettingsScreen() {
                   <div className="text-[0.8125rem] text-text-secondary mt-0.5">Plain text, PDF, or standard manuscript format.</div>
                 </div>
                 <button
-                  className="px-3 h-7 rounded-sm text-[0.8125rem] border border-border text-text-secondary hover:text-text hover:bg-black/[0.04] transition-colors cursor-pointer shrink-0 ml-6"
+                  className="px-3 h-7 rounded-sm text-[0.8125rem] border border-border text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer shrink-0 ml-6"
                   onClick={() => setExportOpen(true)}
                 >
                   Export…
@@ -195,7 +202,7 @@ interface SettingRowProps {
 
 function SettingRow({ label, description, checked, onChange }: SettingRowProps) {
   return (
-    <label className="flex items-center justify-between px-4 py-3 bg-surface cursor-pointer hover:bg-black/[0.02] transition-colors">
+    <label className="flex items-center justify-between px-4 py-3 bg-surface cursor-pointer hover:bg-hover transition-colors">
       <div>
         <div className="text-[0.9375rem] text-text">{label}</div>
         <div className="text-[0.8125rem] text-text-secondary mt-0.5">{description}</div>
