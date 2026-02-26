@@ -7,10 +7,12 @@ import {
   isFileSystemAccessSupported,
   pickDirectory,
   createProjectStructure,
+  cloneProjectFromSource,
   validateProjectDirectory,
   readProjectJson,
   readWritingLog,
 } from '../../fs/projectFs'
+import type { TemplateOptions } from '../../fs/projectFs'
 import type { ProjectType } from '@endpapers/types'
 import NewProjectDialog from '../../components/NewProjectDialog/NewProjectDialog'
 import RecentProjectsList from '../../components/RecentProjectsList/RecentProjectsList'
@@ -36,14 +38,27 @@ export default function HomeScreen() {
     loadRecents()
   }, [loadRecents])
 
-  async function handleNewProject(title: string, type: ProjectType, customTypeLabel?: string) {
+  async function handleNewProject(
+    title: string,
+    type: ProjectType,
+    customTypeLabel?: string,
+    template?: { sourceHandle: FileSystemDirectoryHandle; options: TemplateOptions },
+  ) {
     setShowDialog(false)
     setIsBusy(true)
     setError(null)
     try {
       const handle = await pickDirectory()
       if (!handle) return
-      const project = await createProjectStructure(handle, title, '', type, customTypeLabel)
+      let project, writingLog
+      if (template) {
+        const result = await cloneProjectFromSource(template.sourceHandle, handle, title, type, customTypeLabel, template.options)
+        project = result.project
+        writingLog = result.writingLog
+      } else {
+        project = await createProjectStructure(handle, title, '', type, customTypeLabel)
+        writingLog = { goals: {}, log: [] }
+      }
       const recent: RecentProject = {
         id: project.id,
         handle,
@@ -51,7 +66,7 @@ export default function HomeScreen() {
         lastOpened: new Date().toISOString().split('T')[0],
       }
       await upsertRecent(recent)
-      openProject(handle, project, project.id, { goals: {}, log: [] })
+      openProject(handle, project, project.id, writingLog)
       navigate('/editor')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
@@ -358,7 +373,7 @@ export default function HomeScreen() {
 
       {showDialog && (
         <NewProjectDialog
-          onConfirm={(title, type, customTypeLabel) => { void handleNewProject(title, type, customTypeLabel) }}
+          onConfirm={(title, type, customTypeLabel, template) => { void handleNewProject(title, type, customTypeLabel, template) }}
           onCancel={() => setShowDialog(false)}
         />
       )}

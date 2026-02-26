@@ -4,6 +4,7 @@ import type { RecentProject } from '../../db/recents'
 import { removeRecent, touchRecent } from '../../db/recents'
 import { requestPermissionForHandle, readProjectJson, readWritingLog } from '../../fs/projectFs'
 import { useProject } from '../../contexts/ProjectContext'
+import { IconFileText, IconClose } from '../icons'
 
 interface Props {
   recents: RecentProject[]
@@ -44,42 +45,52 @@ export default function RecentProjectsList({ recents, onRecentsChanged }: Props)
   }
 
   return (
-    <ul className="list-none border border-border rounded-md overflow-hidden">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3.5">
       {recents.map(item => (
-        <li key={item.id} className="border-b border-border last:border-b-0">
+        <div key={item.id} className="group relative">
           <div
-            className="group flex items-center gap-2 px-4 py-3.5 cursor-pointer transition-colors hover:bg-hover"
+            className="bg-surface border border-border rounded-xl p-5 cursor-pointer transition-all hover:border-accent/40 hover:shadow-[0_4px_16px_rgba(43,108,176,0.1)] hover:-translate-y-0.5 flex flex-col gap-2.5"
             onClick={() => { void handleOpen(item) }}
           >
-            <div className="flex-1 min-w-0">
-              <div className="text-[0.9375rem] text-text truncate">{item.title}</div>
-              <div className="text-[0.8125rem] text-text-secondary mt-0.5">
-                {formatDate(item.lastOpened)}
-              </div>
+            <div className="w-[38px] h-[38px] rounded-lg bg-accent/10 flex items-center justify-center">
+              <IconFileText size={20} className="text-accent" />
             </div>
-            <button
-              className="bg-transparent border-0 cursor-pointer text-text-secondary px-1.5 py-1 leading-none text-lg rounded-sm opacity-0 group-hover:opacity-100 transition-all hover:text-text"
-              onClick={e => { e.stopPropagation(); void handleRemove(item.id) }}
-              aria-label="Remove from recents"
-            >
-              ×
-            </button>
+            <div className="min-w-0">
+              <div className="text-[0.875rem] font-semibold text-text truncate">{item.title}</div>
+              <div className="text-[0.75rem] text-text-placeholder mt-0.5">{formatDate(item.lastOpened)}</div>
+            </div>
           </div>
+          <button
+            className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-sm text-text-placeholder hover:text-text hover:bg-hover transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+            onClick={e => { e.stopPropagation(); void handleRemove(item.id) }}
+            aria-label="Remove from recents"
+          >
+            <IconClose size={14} />
+          </button>
           {itemErrors[item.id] && (
-            <div className="text-[0.8125rem] text-danger px-4 py-2 bg-danger-surface border-t border-border">
+            <div className="text-[0.75rem] text-red-500 mt-1 px-1">
               {itemErrors[item.id]}
             </div>
           )}
-        </li>
+        </div>
       ))}
-    </ul>
+    </div>
   )
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+  const date = new Date(iso + 'T00:00:00')
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) return 'Opened today'
+  if (diffDays === 1) return 'Opened yesterday'
+  if (diffDays < 7) return `Opened ${diffDays} days ago`
+
+  return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
   })
 }
