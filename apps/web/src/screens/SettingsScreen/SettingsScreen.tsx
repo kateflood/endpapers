@@ -184,7 +184,7 @@ export default function SettingsScreen() {
               <div className="flex items-center justify-between px-4 py-3 bg-surface">
                 <div>
                   <div className="text-[0.9375rem] text-text">Export project</div>
-                  <div className="text-[0.8125rem] text-text-secondary mt-0.5">Plain text, PDF, or standard manuscript format.</div>
+                  <div className="text-[0.8125rem] text-text-secondary mt-0.5">Export as plain text, Markdown, HTML, PDF, Word, or manuscript format.</div>
                 </div>
                 <button
                   className="px-3 h-7 rounded-sm text-[0.8125rem] border border-border text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer shrink-0 ml-6"

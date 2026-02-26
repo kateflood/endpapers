@@ -18,6 +18,7 @@ import { SearchReplace } from './searchExtension'
 import { IconClose } from '../icons'
 import EditorToolbar from './EditorToolbar'
 import SearchBar from './SearchBar'
+import ExportDialog from '../ExportDialog/ExportDialog'
 
 function findSectionFile(sections: SectionManifestEntry[], id: string): string | null {
   for (const entry of sections) {
@@ -25,6 +26,18 @@ function findSectionFile(sections: SectionManifestEntry[], id: string): string |
     if (entry.type === 'group' && entry.children) {
       for (const child of entry.children) {
         if (child.id === id) return child.file ?? null
+      }
+    }
+  }
+  return null
+}
+
+function findSectionTitle(sections: SectionManifestEntry[], id: string): string | null {
+  for (const entry of sections) {
+    if (entry.id === id) return entry.title
+    if (entry.type === 'group' && entry.children) {
+      for (const child of entry.children) {
+        if (child.id === id) return child.title
       }
     }
   }
@@ -55,6 +68,7 @@ export default function RichTextEditor({ focusMode = false, onExitFocus }: RichT
   const fontSize = settings.fontSize
   const [loading, setLoading] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [charCount, setCharCount] = useState(0)
   const [exitBtnVisible, setExitBtnVisible] = useState(false)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -210,6 +224,7 @@ export default function RichTextEditor({ focusMode = false, onExitFocus }: RichT
           editor={editor}
           searchOpen={searchOpen}
           onToggleSearch={() => setSearchOpen(o => !o)}
+          onExportSection={() => setExportOpen(true)}
           defaultFont={font}
           defaultFontSize={fontSize}
         />
@@ -251,6 +266,20 @@ export default function RichTextEditor({ focusMode = false, onExitFocus }: RichT
           })()}
         </div>
       )}
+      {exportOpen && activeSectionId && editor && (() => {
+        const sectionTitle =
+          findSectionTitle(project?.sections ?? [], activeSectionId) ??
+          findSectionTitle(project?.extras ?? [], activeSectionId) ??
+          findSectionTitle(project?.frontMatter ?? [], activeSectionId) ??
+          findSectionTitle(project?.backMatter ?? [], activeSectionId) ??
+          'Untitled'
+        return (
+          <ExportDialog
+            sectionContext={{ title: sectionTitle, html: editor.getHTML() }}
+            onClose={() => setExportOpen(false)}
+          />
+        )
+      })()}
     </div>
   )
 }

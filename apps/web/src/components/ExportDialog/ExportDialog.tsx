@@ -4,53 +4,93 @@ import { useProject } from '../../contexts/ProjectContext'
 import { useToast } from '../../contexts/ToastContext'
 import { readSectionFile } from '../../fs/projectFs'
 import Dialog from '../Dialog'
+import { htmlToPlainText, htmlToMarkdown, escHtml, triggerDownload, buildPrintHtml, buildDocHtml, buildHtmlExport } from './exportHelpers'
 
-type ExportFormat = 'txt' | 'pdf' | 'doc' | 'manuscript'
+// ── Format registry ───────────────────────────────────────────────────────────
 
-const FORMAT_OPTIONS: { value: ExportFormat; label: string; description: string }[] = [
-  { value: 'txt', label: 'Plain text', description: '.txt — sections joined with page break characters' },
-  { value: 'pdf', label: 'PDF', description: 'Opens a print dialog — save as PDF from there' },
-  { value: 'doc', label: 'Word document', description: '.doc — uses your editor font and styling' },
-  { value: 'manuscript', label: 'Standard manuscript', description: '.doc — Times New Roman, double-spaced, running header, title page' },
+type ExportFormat = 'txt' | 'md' | 'html' | 'pdf' | 'doc' | 'manuscript'
+
+const FORMAT_OPTIONS: { value: ExportFormat; label: string; projectOnly?: boolean }[] = [
+  { value: 'txt', label: 'Plain text' },
+  { value: 'md', label: 'Markdown' },
+  { value: 'html', label: 'HTML' },
+  { value: 'pdf', label: 'PDF' },
+  { value: 'doc', label: 'Word document' },
+  { value: 'manuscript', label: 'Standard manuscript', projectOnly: true },
 ]
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function flattenEntries(entries: SectionManifestEntry[]): SectionManifestEntry[] {
   return entries.flatMap(e => e.type === 'group' ? (e.children ?? []) : [e])
 }
 
-function htmlToPlainText(html: string): string {
-  const el = document.createElement('div')
-  el.innerHTML = html
-  el.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li').forEach(node => {
-    node.after(document.createTextNode('\n'))
-  })
-  el.querySelectorAll('br').forEach(br => br.replaceWith('\n'))
-  return (el.textContent ?? '').replace(/\n{3,}/g, '\n\n').trim()
-}
-
-function escHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
-function triggerDownload(content: string, filename: string, mimeType: string) {
-  const blob = new Blob([content], { type: mimeType })
-  const url = URL.createObjectURL(blob)
-  const a = Object.assign(document.createElement('a'), { href: url, download: filename })
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+function slugify(str: string): string {
+  return str.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '') || 'export'
 }
 
 type SectionZone = 'front' | 'draft' | 'back'
 
-interface SectionData { title: string; html: string; zone: SectionZone }
+interface SectionData { id: string; title: string; html: string; zone: SectionZone }
 
-function buildPlainText(sections: SectionData[], showTitles = true): string {
+async function loadAllSections(
+  project: { frontMatter?: SectionManifestEntry[]; sections?: SectionManifestEntry[]; backMatter?: SectionManifestEntry[] },
+  handle: FileSystemDirectoryHandle,
+): Promise<SectionData[]> {
+  const taggedEntries = [
+    ...flattenEntries(project.frontMatter ?? []).map(e => ({ entry: e, zone: 'front' as const })),
+    ...flattenEntries(project.sections ?? []).map(e => ({ entry: e, zone: 'draft' as const })),
+    ...flattenEntries(project.backMatter ?? []).map(e => ({ entry: e, zone: 'back' as const })),
+  ].filter(({ entry: e }) => e.type === 'section' && e.file)
+
+  return Promise.all(
+    taggedEntries.map(async ({ entry: e, zone }) => ({
+      id: e.id,
+      title: e.title,
+      html: await readSectionFile(handle, e.file!),
+      zone,
+    }))
+  )
+}
+
+// ── Manuscript helpers ────────────────────────────────────────────────────────
+
+interface ManuscriptProject {
+  title: string
+  author: string
+  authorInfo?: { firstName?: string; lastName?: string; phone?: string; email?: string }
+}
+
+interface ManuscriptMeta {
+  displayName: string
+  headerLastName: string
+  headerTitle: string
+  contactLines: string[]
+}
+
+function buildManuscriptMeta(sections: SectionData[], project: ManuscriptProject): ManuscriptMeta {
+  const authorInfo = project.authorInfo
+  const displayName = authorInfo?.firstName || authorInfo?.lastName
+    ? [authorInfo.firstName, authorInfo.lastName].filter(Boolean).join(' ')
+    : project.author
+  const lastName = authorInfo?.lastName ?? project.author.trim().split(/\s+/).pop() ?? project.author
+
+  const wordCount = sections.reduce((acc, s) => {
+    return acc + htmlToPlainText(s.html).split(/\s+/).filter(Boolean).length
+  }, 0)
+  const approxWords = `Approx. ${Math.round(wordCount / 100) * 100} words`
+
+  return {
+    displayName,
+    headerLastName: lastName.toUpperCase(),
+    headerTitle: project.title.toUpperCase().slice(0, 35),
+    contactLines: [displayName, authorInfo?.phone, authorInfo?.email, approxWords].filter(Boolean) as string[],
+  }
+}
+
+// ── Multi-section builders (project scope) ────────────────────────────────────
+
+function buildPlainTextMulti(sections: SectionData[], showTitles: boolean): string {
   return sections
     .map(s => {
       const heading = showTitles && s.zone === 'draft' ? `${s.title}\n\n` : ''
@@ -59,7 +99,27 @@ function buildPlainText(sections: SectionData[], showTitles = true): string {
     .join('\n\n\f\n\n')
 }
 
-function buildPrintHtml(sections: SectionData[], title: string, font: string, fontSize: number, showTitles = true): string {
+function buildMarkdownMulti(sections: SectionData[], showTitles: boolean): string {
+  return sections
+    .map(s => {
+      const heading = showTitles && s.zone === 'draft' ? `# ${s.title}\n\n` : ''
+      return `${heading}${htmlToMarkdown(s.html)}`
+    })
+    .join('\n\n---\n\n')
+}
+
+function buildHtmlMulti(sections: SectionData[], title: string, font: string, fontSize: number, showTitles: boolean): string {
+  const sectionsHtml = sections
+    .map(s => {
+      const heading = showTitles && s.zone === 'draft' ? `<h1>${escHtml(s.title)}</h1>\n` : ''
+      return `${heading}${s.html}`
+    })
+    .join('\n<hr>\n')
+
+  return buildHtmlExport(sectionsHtml, title, font, fontSize)
+}
+
+function buildPrintHtmlMulti(sections: SectionData[], title: string, font: string, fontSize: number, showTitles: boolean): string {
   const sectionsHtml = sections
     .map((s, i) => {
       const heading = showTitles && s.zone === 'draft' ? `<h1>${escHtml(s.title)}</h1>\n` : ''
@@ -90,8 +150,8 @@ function buildPrintHtml(sections: SectionData[], title: string, font: string, fo
 </html>`
 }
 
-function buildDocHtml(sections: SectionData[], title: string, font: string, fontSize: number, showTitles = true): string {
-  const fontPt = Math.round(fontSize * 0.75) // px to pt
+function buildDocHtmlMulti(sections: SectionData[], title: string, font: string, fontSize: number, showTitles: boolean): string {
+  const fontPt = Math.round(fontSize * 0.75)
   const sectionsHtml = sections
     .map(s => {
       const heading = showTitles && s.zone === 'draft' ? `<h1>${escHtml(s.title)}</h1>\n` : ''
@@ -127,29 +187,8 @@ ${sectionsHtml}
 </html>`
 }
 
-function buildManuscriptHtml(sections: SectionData[], project: { title: string; author: string; authorInfo?: { firstName?: string; lastName?: string; phone?: string; email?: string } }, showTitles = true): string {
-  const authorInfo = project.authorInfo
-  const displayName = authorInfo?.firstName || authorInfo?.lastName
-    ? [authorInfo.firstName, authorInfo.lastName].filter(Boolean).join(' ')
-    : project.author
-  const lastName = authorInfo?.lastName ?? project.author.trim().split(/\s+/).pop() ?? project.author
-  const headerLastName = lastName.toUpperCase()
-  const headerTitle = project.title.toUpperCase().slice(0, 35)
-
-  const wordCount = sections.reduce((acc, s) => {
-    return acc + htmlToPlainText(s.html).split(/\s+/).filter(Boolean).length
-  }, 0)
-  const approxWords = `Approx. ${Math.round(wordCount / 100) * 100} words`
-
-  // Build title-page contact block
-  const contactLines = [
-    displayName,
-    authorInfo?.phone,
-    authorInfo?.email,
-    approxWords,
-  ].filter(Boolean)
-
-  // ~10 blank lines to push title toward vertical center of title page
+function buildManuscriptHtml(sections: SectionData[], project: ManuscriptProject, showTitles: boolean): string {
+  const { displayName, headerLastName, headerTitle, contactLines } = buildManuscriptMeta(sections, project)
   const spacers = Array.from({ length: 10 }, () => '<p class="ni">&nbsp;</p>').join('\n')
 
   const sectionsHtml = sections
@@ -192,7 +231,7 @@ h1, h2, h3 { line-height: 2; margin: 0; text-align: center; text-indent: 0; }
 <div style="mso-element:header" id="h2">
   <p style="text-indent:0;margin:0;line-height:1.5">&nbsp;</p>
 </div>
-${contactLines.map(line => `<p class="ni" style="text-align:right">${escHtml(line!)}</p>`).join('\n')}
+${contactLines.map(line => `<p class="ni" style="text-align:right">${escHtml(line)}</p>`).join('\n')}
 ${spacers}
 <p class="ni" style="text-align:center"><strong>${escHtml(project.title)}</strong></p>
 <p class="ni" style="text-align:center">by</p>
@@ -203,10 +242,10 @@ ${sectionsHtml}
 </html>`
 }
 
-// ── Preview builders (browser-friendly versions) ─────────────────────────────
+// ── Preview builders ──────────────────────────────────────────────────────────
 
-function buildPlainTextPreview(sections: SectionData[], showTitles = true): string {
-  const plainText = buildPlainText(sections, showTitles)
+function buildPlainTextPreview(sections: SectionData[], showTitles: boolean): string {
+  const plainText = buildPlainTextMulti(sections, showTitles)
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -219,27 +258,22 @@ function buildPlainTextPreview(sections: SectionData[], showTitles = true): stri
 </html>`
 }
 
-function buildManuscriptPreview(sections: SectionData[], project: { title: string; author: string; authorInfo?: { firstName?: string; lastName?: string; phone?: string; email?: string } }, showTitles = true): string {
-  const authorInfo = project.authorInfo
-  const displayName = authorInfo?.firstName || authorInfo?.lastName
-    ? [authorInfo.firstName, authorInfo.lastName].filter(Boolean).join(' ')
-    : project.author
-  const lastName = authorInfo?.lastName ?? project.author.trim().split(/\s+/).pop() ?? project.author
-  const headerLastName = lastName.toUpperCase()
-  const headerTitle = project.title.toUpperCase().slice(0, 35)
+function buildMarkdownPreview(sections: SectionData[], showTitles: boolean): string {
+  const md = buildMarkdownMulti(sections, showTitles)
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: "Courier New", monospace; font-size: 11pt; line-height: 1.6; margin: 1in; color: #000; white-space: pre-wrap; word-wrap: break-word; }
+</style>
+</head>
+<body>${escHtml(md)}</body>
+</html>`
+}
 
-  const wordCount = sections.reduce((acc, s) => {
-    return acc + htmlToPlainText(s.html).split(/\s+/).filter(Boolean).length
-  }, 0)
-  const approxWords = `Approx. ${Math.round(wordCount / 100) * 100} words`
-
-  const contactLines = [
-    displayName,
-    authorInfo?.phone,
-    authorInfo?.email,
-    approxWords,
-  ].filter(Boolean)
-
+function buildManuscriptPreview(sections: SectionData[], project: ManuscriptProject, showTitles: boolean): string {
+  const { displayName, headerLastName, headerTitle, contactLines } = buildManuscriptMeta(sections, project)
   const spacers = Array.from({ length: 10 }, () => '<p class="ni">&nbsp;</p>').join('\n')
 
   return `<!DOCTYPE html>
@@ -259,7 +293,7 @@ function buildManuscriptPreview(sections: SectionData[], project: { title: strin
 </head>
 <body>
 <div class="page">
-${contactLines.map(line => `<p class="ni" style="text-align:right">${escHtml(line!)}</p>`).join('\n')}
+${contactLines.map(line => `<p class="ni" style="text-align:right">${escHtml(line)}</p>`).join('\n')}
 ${spacers}
 <p class="ni" style="text-align:center"><strong>${escHtml(project.title)}</strong></p>
 <p class="ni" style="text-align:center">by</p>
@@ -280,15 +314,39 @@ ${heading}${s.html}
 </html>`
 }
 
-interface Props {
-  onClose: () => void
+// ── Section-scope preview (single section) ────────────────────────────────────
+
+function buildSectionPreview(html: string, format: ExportFormat, title: string, font: string, fontSize: number): string {
+  if (format === 'txt') {
+    const plain = htmlToPlainText(html)
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body { font-family: "Courier New", monospace; font-size: 11pt; line-height: 1.6; margin: 1in; color: #000; white-space: pre-wrap; }</style></head><body>${escHtml(plain)}</body></html>`
+  }
+  if (format === 'md') {
+    const md = htmlToMarkdown(html)
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body { font-family: "Courier New", monospace; font-size: 11pt; line-height: 1.6; margin: 1in; color: #000; white-space: pre-wrap; }</style></head><body>${escHtml(md)}</body></html>`
+  }
+  // html, pdf, doc all use the styled preview
+  return buildPrintHtml(html, title, font, fontSize)
 }
 
-export default function ExportDialog({ onClose }: Props) {
+// ── Component ─────────────────────────────────────────────────────────────────
+
+interface Props {
+  onClose: () => void
+  sectionContext?: {
+    title: string
+    html: string
+  }
+}
+
+export default function ExportDialog({ onClose, sectionContext }: Props) {
   const { project, handle } = useProject()
   const { showToast } = useToast()
+
+  const scope: 'section' | 'project' = sectionContext ? 'section' : 'project'
   const [format, setFormat] = useState<ExportFormat>('txt')
   const [showTitles, setShowTitles] = useState(true)
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set())
   const [step, setStep] = useState<'options' | 'preview'>('options')
   const [sections, setSections] = useState<SectionData[] | null>(null)
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
@@ -298,118 +356,89 @@ export default function ExportDialog({ onClose }: Props) {
   const font = project?.settings?.font ?? 'Georgia'
   const fontSize = project?.settings?.fontSize ?? 18
 
-  function buildPreview(loaded: SectionData[], fmt: ExportFormat): string {
-    if (fmt === 'txt') return buildPlainTextPreview(loaded, showTitles)
-    if (fmt === 'manuscript') return buildManuscriptPreview(loaded, { title: project!.title, author: project!.author, authorInfo: project!.authorInfo }, showTitles)
-    // PDF and doc use the same editor-styled preview
-    return buildPrintHtml(loaded, project!.title, font, fontSize, showTitles)
+  // Front matter / back matter entries for checkboxes
+  const frontMatterEntries = flattenEntries(project?.frontMatter ?? []).filter(e => e.type === 'section')
+  const backMatterEntries = flattenEntries(project?.backMatter ?? []).filter(e => e.type === 'section')
+
+  function toggleExcluded(id: string) {
+    setExcludedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
-  // Load sections when entering preview step
+  const visibleFormats = FORMAT_OPTIONS.filter(f => scope === 'project' || !f.projectOnly)
+
+  // ── Preview builders ──────────────────────────────────────────────────────
+
+  function buildProjectPreview(loaded: SectionData[], fmt: ExportFormat, titles: boolean): string {
+    if (fmt === 'txt') return buildPlainTextPreview(loaded, titles)
+    if (fmt === 'md') return buildMarkdownPreview(loaded, titles)
+    if (fmt === 'manuscript') return buildManuscriptPreview(loaded, { title: project!.title, author: project!.author, authorInfo: project!.authorInfo }, titles)
+    if (fmt === 'html') return buildHtmlMulti(loaded, project!.title, font, fontSize, titles)
+    // pdf and doc use the same styled preview
+    return buildPrintHtmlMulti(loaded, project!.title, font, fontSize, titles)
+  }
+
+  // ── Load project sections on preview ──────────────────────────────────────
+
   useEffect(() => {
-    if (step !== 'preview' || !project || !handle) return
+    if (step !== 'preview' || scope !== 'project' || !project || !handle) return
     if (sections) {
-      // Already loaded — just rebuild preview for current format
-      setPreviewHtml(buildPreview(sections, format))
+      const filtered = sections.filter(s => !excludedIds.has(s.id))
+      setPreviewHtml(buildProjectPreview(filtered, format, showTitles))
       return
     }
     let cancelled = false
     setLoading(true)
 
-    async function loadSections() {
-      const taggedEntries: { entry: SectionManifestEntry; zone: SectionZone }[] = [
-        ...flattenEntries(project!.frontMatter ?? []).map(e => ({ entry: e, zone: 'front' as const })),
-        ...flattenEntries(project!.sections ?? []).map(e => ({ entry: e, zone: 'draft' as const })),
-        ...flattenEntries(project!.backMatter ?? []).map(e => ({ entry: e, zone: 'back' as const })),
-      ].filter(({ entry: e }) => e.type === 'section' && e.file)
-
-      const loaded = await Promise.all(
-        taggedEntries.map(async ({ entry: e, zone }) => ({
-          title: e.title,
-          html: await readSectionFile(handle!, e.file!),
-          zone,
-        }))
-      )
-
-      if (cancelled) return
-      setSections(loaded)
-      setPreviewHtml(buildPreview(loaded, format))
-      setLoading(false)
-    }
-
-    loadSections().catch(() => {
-      if (!cancelled) {
-        showToast('Failed to load preview.', 'error')
-        setStep('options')
+    loadAllSections(project, handle)
+      .then(loaded => {
+        if (cancelled) return
+        setSections(loaded)
+        const filtered = loaded.filter(s => !excludedIds.has(s.id))
+        setPreviewHtml(buildProjectPreview(filtered, format, showTitles))
         setLoading(false)
-      }
-    })
+      })
+      .catch(() => {
+        if (!cancelled) {
+          showToast('Failed to load preview.', 'error')
+          setStep('options')
+          setLoading(false)
+        }
+      })
     return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, project, handle])
+  }, [step, scope, project, handle])
 
-  // Rebuild preview when format or options change while on preview step
+  // Build section-scope preview
   useEffect(() => {
-    if (step !== 'preview' || !sections) return
-    setPreviewHtml(buildPreview(sections, format))
+    if (step !== 'preview' || scope !== 'section' || !sectionContext) return
+    setPreviewHtml(buildSectionPreview(sectionContext.html, format, sectionContext.title, font, fontSize))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [format, showTitles])
+  }, [step, scope, format, sectionContext])
+
+  // Rebuild project preview when format/options/exclusions change
+  useEffect(() => {
+    if (step !== 'preview' || scope !== 'project' || !sections) return
+    const filtered = sections.filter(s => !excludedIds.has(s.id))
+    setPreviewHtml(buildProjectPreview(filtered, format, showTitles))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [format, showTitles, excludedIds])
+
+  // ── Export handler ────────────────────────────────────────────────────────
 
   async function handleExport() {
-    if (!project || !handle) return
+    if (!project) return
     setExporting(true)
 
     try {
-      // Use cached sections if available, otherwise load fresh
-      let data = sections
-      if (!data) {
-        const taggedEntries: { entry: SectionManifestEntry; zone: SectionZone }[] = [
-          ...flattenEntries(project.frontMatter ?? []).map(e => ({ entry: e, zone: 'front' as const })),
-          ...flattenEntries(project.sections ?? []).map(e => ({ entry: e, zone: 'draft' as const })),
-          ...flattenEntries(project.backMatter ?? []).map(e => ({ entry: e, zone: 'back' as const })),
-        ].filter(({ entry: e }) => e.type === 'section' && e.file)
-
-        data = await Promise.all(
-          taggedEntries.map(async ({ entry: e, zone }) => ({
-            title: e.title,
-            html: await readSectionFile(handle, e.file!),
-            zone,
-          }))
-        )
-      }
-
-      if (format === 'txt') {
-        triggerDownload(buildPlainText(data, showTitles), `${project.title}.txt`, 'text/plain;charset=utf-8')
-        onClose()
-      } else if (format === 'pdf') {
-        const html = buildPrintHtml(data, project.title, font, fontSize, showTitles)
-        const win = window.open('', '_blank')
-        if (win) {
-          win.document.write(html)
-          win.document.close()
-          win.focus()
-          setTimeout(() => win.print(), 300)
-        }
-        onClose()
-      } else if (format === 'doc') {
-        const titleSlug = project.title.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '')
-        triggerDownload(
-          buildDocHtml(data, project.title, font, fontSize, showTitles),
-          `${titleSlug}.doc`,
-          'application/msword',
-        )
-        onClose()
+      if (scope === 'section' && sectionContext) {
+        exportSection(sectionContext.title, sectionContext.html)
       } else {
-        const today = new Date().toISOString().slice(0, 10)
-        const lastName = project.authorInfo?.lastName ?? project.author.trim().split(/\s+/).pop() ?? project.author
-        const titleSlug = project.title.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '')
-        const filename = `${lastName}_${titleSlug}_${today}.doc`
-        triggerDownload(
-          buildManuscriptHtml(data, { title: project.title, author: project.author, authorInfo: project.authorInfo }, showTitles),
-          filename,
-          'application/msword',
-        )
-        onClose()
+        await exportProject()
       }
     } catch {
       showToast('Export failed — please try again.', 'error')
@@ -418,43 +447,152 @@ export default function ExportDialog({ onClose }: Props) {
     }
   }
 
+  function exportSection(title: string, html: string) {
+    const slug = slugify(title)
+
+    if (format === 'txt') {
+      triggerDownload(htmlToPlainText(html), `${slug}.txt`, 'text/plain;charset=utf-8')
+    } else if (format === 'md') {
+      triggerDownload(htmlToMarkdown(html), `${slug}.md`, 'text/plain;charset=utf-8')
+    } else if (format === 'html') {
+      triggerDownload(buildHtmlExport(html, title, font, fontSize), `${slug}.html`, 'text/html;charset=utf-8')
+    } else if (format === 'pdf') {
+      const printHtml = buildPrintHtml(html, title, font, fontSize)
+      const win = window.open('', '_blank')
+      if (win) {
+        win.document.write(printHtml)
+        win.document.close()
+        win.focus()
+        setTimeout(() => win.print(), 300)
+      }
+    } else if (format === 'doc') {
+      triggerDownload(buildDocHtml(html, title, font, fontSize), `${slug}.doc`, 'application/msword')
+    }
+    onClose()
+  }
+
+  async function exportProject() {
+    if (!project || !handle) return
+
+    const data = sections ?? await loadAllSections(project, handle)
+    const filtered = data.filter(s => !excludedIds.has(s.id))
+    const slug = slugify(project.title)
+
+    if (format === 'txt') {
+      triggerDownload(buildPlainTextMulti(filtered, showTitles), `${slug}.txt`, 'text/plain;charset=utf-8')
+    } else if (format === 'md') {
+      triggerDownload(buildMarkdownMulti(filtered, showTitles), `${slug}.md`, 'text/plain;charset=utf-8')
+    } else if (format === 'html') {
+      triggerDownload(buildHtmlMulti(filtered, project.title, font, fontSize, showTitles), `${slug}.html`, 'text/html;charset=utf-8')
+    } else if (format === 'pdf') {
+      const html = buildPrintHtmlMulti(filtered, project.title, font, fontSize, showTitles)
+      const win = window.open('', '_blank')
+      if (win) {
+        win.document.write(html)
+        win.document.close()
+        win.focus()
+        setTimeout(() => win.print(), 300)
+      }
+    } else if (format === 'doc') {
+      triggerDownload(buildDocHtmlMulti(filtered, project.title, font, fontSize, showTitles), `${slug}.doc`, 'application/msword')
+    } else if (format === 'manuscript') {
+      const today = new Date().toISOString().slice(0, 10)
+      const lastName = project.authorInfo?.lastName ?? project.author.trim().split(/\s+/).pop() ?? project.author
+      const filename = `${lastName}_${slug}_${today}.doc`
+      triggerDownload(
+        buildManuscriptHtml(filtered, { title: project.title, author: project.author, authorInfo: project.authorInfo }, showTitles),
+        filename,
+        'application/msword',
+      )
+    }
+    onClose()
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
   const dialogWidth = step === 'preview' ? 'max-w-[720px]' : 'max-w-[400px]'
+  const labelClass = 'text-[0.6875rem] font-semibold uppercase tracking-wider text-text-secondary mb-1'
+  const selectClass = 'w-full h-9 px-3 rounded-sm text-[0.9375rem] text-text bg-bg border border-border outline-none cursor-pointer focus:border-accent'
+  const dialogTitle = scope === 'section' ? `Export "${sectionContext!.title}"` : 'Export project'
 
   return (
-    <Dialog title="Export" width={dialogWidth} onClose={onClose}>
+    <Dialog title={dialogTitle} width={dialogWidth} onClose={onClose}>
       {step === 'options' && (
         <>
-          <div className="px-4 py-4 flex flex-col gap-1">
-            <label className="text-[0.6875rem] font-semibold uppercase tracking-wider text-text-secondary mb-1">
-              Format
-            </label>
-            {FORMAT_OPTIONS.map(opt => (
-              <label key={opt.value} className="flex items-start gap-2.5 cursor-pointer select-none py-1.5">
-                <input
-                  type="radio"
-                  name="export-format"
-                  value={opt.value}
-                  checked={format === opt.value}
-                  onChange={() => setFormat(opt.value)}
-                  className="mt-0.5 cursor-pointer"
-                />
-                <span className="flex flex-col gap-0.5">
-                  <span className="text-[0.875rem] text-text">{opt.label}</span>
-               </span>
-              </label>
-            ))}
-            <label className="flex items-center gap-2 cursor-pointer select-none mt-2 py-1">
-              <input
-                type="checkbox"
-                checked={showTitles}
-                onChange={e => setShowTitles(e.target.checked)}
-                className="cursor-pointer"
-              />
-              <span className="text-[0.8125rem] text-text">Include section titles</span>
-            </label>
-            <p className="text-[0.75rem] text-text-placeholder mt-2">
-              Exports front matter, draft, and back matter in order. Drawer sections are excluded.
-            </p>
+          <div className="px-4 py-4 flex flex-col gap-4 overflow-y-auto max-h-[65vh]">
+
+            {/* Format dropdown */}
+            <div>
+              <label className={labelClass}>Format</label>
+              <select
+                className={selectClass}
+                value={format}
+                onChange={e => setFormat(e.target.value as ExportFormat)}
+              >
+                {visibleFormats.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Project-scope options */}
+            {scope === 'project' && (
+              <>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showTitles}
+                    onChange={e => setShowTitles(e.target.checked)}
+                    className="cursor-pointer"
+                  />
+                  <span className="text-[0.8125rem] text-text">Include section titles</span>
+                </label>
+
+                {/* Front matter */}
+                {frontMatterEntries.length > 0 && (
+                  <div>
+                    <div className={labelClass}>Front matter</div>
+                    <div className="flex flex-col gap-0.5 mt-1">
+                      {frontMatterEntries.map(e => (
+                        <label key={e.id} className="flex items-center gap-2 cursor-pointer select-none py-0.5">
+                          <input
+                            type="checkbox"
+                            checked={!excludedIds.has(e.id)}
+                            onChange={() => toggleExcluded(e.id)}
+                            className="cursor-pointer"
+                          />
+                          <span className="text-[0.8125rem] text-text">{e.title}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Back matter */}
+                {backMatterEntries.length > 0 && (
+                  <div>
+                    <div className={labelClass}>Back matter</div>
+                    <div className="flex flex-col gap-0.5 mt-1">
+                      {backMatterEntries.map(e => (
+                        <label key={e.id} className="flex items-center gap-2 cursor-pointer select-none py-0.5">
+                          <input
+                            type="checkbox"
+                            checked={!excludedIds.has(e.id)}
+                            onChange={() => toggleExcluded(e.id)}
+                            className="cursor-pointer"
+                          />
+                          <span className="text-[0.8125rem] text-text">{e.title}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-[0.75rem] text-text-placeholder">
+                  Exports front matter, draft, and back matter in order. Drawer sections are excluded.
+                </p>
+              </>
+            )}
           </div>
 
           <div className="flex items-center px-4 py-3 border-t border-border shrink-0">
@@ -486,34 +624,6 @@ export default function ExportDialog({ onClose }: Props) {
 
       {step === 'preview' && (
         <>
-          {/* Format selector in preview header */}
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-border shrink-0">
-            <span className="text-[0.75rem] text-text-secondary shrink-0">Format:</span>
-            {FORMAT_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                className={`px-2.5 h-7 rounded-sm text-[0.8125rem] transition-colors cursor-pointer ${
-                  format === opt.value
-                    ? 'text-text bg-active'
-                    : 'text-text-secondary hover:text-text hover:bg-hover'
-                }`}
-                onClick={() => setFormat(opt.value)}
-              >
-                {opt.label}
-              </button>
-            ))}
-            <div className="w-px h-4 bg-border" />
-            <label className="flex items-center gap-1.5 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={showTitles}
-                onChange={e => setShowTitles(e.target.checked)}
-                className="cursor-pointer"
-              />
-              <span className="text-[0.75rem] text-text-secondary">Section titles</span>
-            </label>
-          </div>
-
           <div className="px-4 py-4 flex-1 min-h-0">
             {previewHtml && !loading ? (
               <iframe

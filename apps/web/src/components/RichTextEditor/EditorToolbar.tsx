@@ -6,7 +6,7 @@ import {
   IconBold, IconItalic, IconUnderline, IconStrike, IconHighlight, IconCode,
   IconBulletList, IconOrderedList, IconBlockquote,
   IconAlignLeft, IconAlignCenter, IconAlignRight,
-  IconImage, IconSearch,
+  IconImage, IconSearch, IconDownload,
 } from '../icons'
 
 export const FONTS = [
@@ -29,6 +29,7 @@ interface Props {
   editor: Editor | null
   searchOpen: boolean
   onToggleSearch: () => void
+  onExportSection: () => void
   defaultFont: string
   defaultFontSize: number
 }
@@ -37,6 +38,7 @@ export default function EditorToolbar({
   editor,
   searchOpen,
   onToggleSearch,
+  onExportSection,
   defaultFont,
   defaultFontSize,
 }: Props) {
@@ -152,6 +154,11 @@ export default function EditorToolbar({
 
       {/* Find */}
       {iconBtn(<IconSearch size={ICON_SIZE} />, searchOpen, onToggleSearch, 'Search & replace')}
+
+      {sep}
+
+      {/* Export section */}
+      {iconBtn(<IconDownload size={ICON_SIZE} />, false, onExportSection, 'Export section')}
     </div>
   )
 }

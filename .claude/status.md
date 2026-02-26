@@ -202,4 +202,3 @@ Key technical decisions
 - AI: bring-your-own API key, no backend proxying
 - Rich text editor: TipTap v3
 - PDF export: browser print-to-PDF with custom stylesheet
-- ePub export: Pandoc on Cloud Run (paid, not in v1)
