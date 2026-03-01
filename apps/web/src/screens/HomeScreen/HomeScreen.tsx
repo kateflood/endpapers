@@ -50,6 +50,10 @@ export default function HomeScreen() {
     try {
       const handle = await pickDirectory()
       if (!handle) return
+      if (template && await handle.isSameEntry(template.sourceHandle)) {
+        setError('The destination folder cannot be the same as the source project. Please choose a different folder.')
+        return
+      }
       let project, writingLog
       if (template) {
         const result = await cloneProjectFromSource(template.sourceHandle, handle, title, type, customTypeLabel, template.options)
