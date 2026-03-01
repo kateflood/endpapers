@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import type { WritingLog, WritingGoals, WritingLogEntry } from '@endpapers/types'
-import { todayISODate } from '@endpapers/utils'
+import type { WritingLog, WritingGoals } from '@endpapers/types'
+import { todayISODate, isThisWeek, isThisMonth, sumWritingLog } from '@endpapers/utils'
 import { IconClose } from '../icons'
 
 interface Props {
@@ -9,31 +9,6 @@ interface Props {
   totalWords: number
   onUpdateGoals: (goals: WritingGoals) => Promise<void>
   onClose: () => void
-}
-
-// ---------------------------------------------------------------------------
-// Date helpers
-// ---------------------------------------------------------------------------
-
-function isThisWeek(dateStr: string): boolean {
-  const d = new Date(dateStr + 'T00:00:00')
-  const today = new Date()
-  const daysFromMonday = today.getDay() === 0 ? 6 : today.getDay() - 1
-  const monday = new Date(today)
-  monday.setDate(today.getDate() - daysFromMonday)
-  monday.setHours(0, 0, 0, 0)
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  sunday.setHours(23, 59, 59, 999)
-  return d >= monday && d <= sunday
-}
-
-function isThisMonth(dateStr: string): boolean {
-  return dateStr.startsWith(todayISODate().slice(0, 7))
-}
-
-function sumLog(log: WritingLogEntry[], filter: (e: WritingLogEntry) => boolean): number {
-  return log.filter(filter).reduce((s, e) => s + e.words, 0)
 }
 
 function formatLogDate(iso: string): string {
@@ -108,10 +83,10 @@ export default function WritingGoalsPanel({ writingLog, sessionWords, totalWords
   // Words written since last flush (not yet in log)
   const unlogged = Math.max(0, totalWords - (lastKnownTotal ?? 0))
 
-  const todayLogged = sumLog(log, e => e.date === today)
+  const todayLogged = sumWritingLog(log, e => e.date === today)
   const dailyWords = todayLogged + unlogged
-  const weeklyWords = sumLog(log, e => isThisWeek(e.date) && e.date !== today) + dailyWords
-  const monthlyWords = sumLog(log, e => isThisMonth(e.date) && e.date !== today) + dailyWords
+  const weeklyWords = sumWritingLog(log, e => isThisWeek(e.date) && e.date !== today) + dailyWords
+  const monthlyWords = sumWritingLog(log, e => isThisMonth(e.date) && e.date !== today) + dailyWords
 
   // Editable goal drafts (empty string = not set)
   const [drafts, setDrafts] = useState({

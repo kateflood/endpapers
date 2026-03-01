@@ -10,12 +10,12 @@ import { TextStyle } from '@tiptap/extension-text-style'
 import { FontFamily } from '@tiptap/extension-font-family'
 import { FontSize } from './fontSizeExtension'
 import type { SectionManifestEntry, ProjectSettings } from '@endpapers/types'
-import { countWords, countCharacters, estimatePages } from '@endpapers/utils'
+import { countWords, findSectionTitle } from '@endpapers/utils'
 import { useProject } from '../../contexts/ProjectContext'
 import { useToast } from '../../contexts/ToastContext'
 import { readSectionFile, writeSectionFile } from '../../fs/projectFs'
 import { SearchReplace } from './searchExtension'
-import { IconClose } from '../icons'
+import { IconClose, IconClock } from '../icons'
 import EditorToolbar from './EditorToolbar'
 import SearchBar from './SearchBar'
 import ExportDialog from '../ExportDialog/ExportDialog'
@@ -26,18 +26,6 @@ function findSectionFile(sections: SectionManifestEntry[], id: string): string |
     if (entry.type === 'group' && entry.children) {
       for (const child of entry.children) {
         if (child.id === id) return child.file ?? null
-      }
-    }
-  }
-  return null
-}
-
-function findSectionTitle(sections: SectionManifestEntry[], id: string): string | null {
-  for (const entry of sections) {
-    if (entry.id === id) return entry.title
-    if (entry.type === 'group' && entry.children) {
-      for (const child of entry.children) {
-        if (child.id === id) return child.title
       }
     }
   }
@@ -57,9 +45,24 @@ const DEFAULTS: ProjectSettings = {
 interface RichTextEditorProps {
   focusMode?: boolean
   onExitFocus: () => void
+  sidebarOpen: boolean
+  onToggleSidebar: () => void
+  onToggleFocus: () => void
+  focusModeEnabled: boolean
+  totalWords: number
+  onNavigateReference: () => void
 }
 
-export default function RichTextEditor({ focusMode = false, onExitFocus }: RichTextEditorProps) {
+export default function RichTextEditor({
+  focusMode = false,
+  onExitFocus,
+  sidebarOpen,
+  onToggleSidebar,
+  onToggleFocus,
+  focusModeEnabled,
+  totalWords,
+  onNavigateReference,
+}: RichTextEditorProps) {
   const { project, handle, activeSectionId, sectionWordCounts, updateSectionWordCount } = useProject()
   const { showToast } = useToast()
   const settings: ProjectSettings = { ...DEFAULTS, ...project?.settings }
@@ -69,7 +72,6 @@ export default function RichTextEditor({ focusMode = false, onExitFocus }: RichT
   const [loading, setLoading] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
-  const [charCount, setCharCount] = useState(0)
   const [exitBtnVisible, setExitBtnVisible] = useState(false)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -126,7 +128,6 @@ export default function RichTextEditor({ focusMode = false, onExitFocus }: RichT
         }, 500)
       }
       const text = e.getText()
-      setCharCount(countCharacters(text))
       if (activeSectionIdRef.current) {
         updateWordCountRef.current(activeSectionIdRef.current, countWords(text))
       }
@@ -167,7 +168,6 @@ export default function RichTextEditor({ focusMode = false, onExitFocus }: RichT
     if (!activeSectionId) {
       activeFileRef.current = null
       editor.commands.setContent('')
-      setCharCount(0)
       return
     }
 
@@ -185,7 +185,6 @@ export default function RichTextEditor({ focusMode = false, onExitFocus }: RichT
         editor.commands.setContent(html || '')
         editor.commands.focus('start')
         const text = editor.getText()
-        setCharCount(countCharacters(text))
         updateSectionWordCount(activeSectionId, countWords(text))
       })
       .catch(console.error)
@@ -224,7 +223,7 @@ export default function RichTextEditor({ focusMode = false, onExitFocus }: RichT
       {!focusMode && searchOpen && editor && (
         <SearchBar editor={editor} onClose={closeSearch} />
       )}
-      {!focusMode && activeSectionId && (
+      {!focusMode && (
         <EditorToolbar
           editor={editor}
           searchOpen={searchOpen}
@@ -232,6 +231,12 @@ export default function RichTextEditor({ focusMode = false, onExitFocus }: RichT
           onExportSection={() => setExportOpen(true)}
           defaultFont={font}
           defaultFontSize={fontSize}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={onToggleSidebar}
+          onToggleFocus={onToggleFocus}
+          focusMode={focusMode}
+          focusModeEnabled={focusModeEnabled}
+          onNavigateReference={onNavigateReference}
         />
       )}
       <div className={`flex-1 overflow-y-auto${settings.paperMode && !focusMode ? ' bg-bg py-10 px-6' : ''}`}>
@@ -256,21 +261,26 @@ export default function RichTextEditor({ focusMode = false, onExitFocus }: RichT
           </div>
         )}
       </div>
-      {!focusMode && activeSectionId && !loading && (
-        <div className="shrink-0 border-t border-border h-7 flex items-center px-4 gap-4 text-[0.75rem] text-text-secondary bg-surface">
-          {(() => {
-            const words = sectionWordCounts[activeSectionId] ?? 0
-            const pages = Math.max(1, estimatePages(words, settings.wordsPerPage))
-            return (
-              <>
-                <span>{words.toLocaleString()} words</span>
-                <span>{pages} {pages === 1 ? 'page' : 'pages'}</span>
-                <span>{charCount.toLocaleString()} characters</span>
-              </>
-            )
-          })()}
-        </div>
-      )}
+      {!focusMode && activeSectionId && !loading && (() => {
+        const sectionWords = sectionWordCounts[activeSectionId] ?? 0
+        const readMin = Math.max(1, Math.ceil(totalWords / 200))
+        return (
+          <div className="shrink-0 border-t border-border h-8 flex items-center px-4 gap-4 text-[0.75rem] text-text-secondary bg-surface">
+            <span><strong className="font-medium text-text-secondary">{sectionWords.toLocaleString()}</strong> words</span>
+            <div className="w-px h-3.5 bg-border" />
+            <span><strong className="font-medium text-text-secondary">{totalWords.toLocaleString()}</strong> total</span>
+            <div className="w-px h-3.5 bg-border" />
+            <span className="flex items-center gap-1">
+              <IconClock size={11} />
+              <strong className="font-medium text-text-secondary">~{readMin} min</strong> read
+            </span>
+            <div className="ml-auto flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+              <span className="text-text-placeholder">Saved locally</span>
+            </div>
+          </div>
+        )
+      })()}
       {exportOpen && activeSectionId && editor && (() => {
         const sectionTitle =
           findSectionTitle(project?.sections ?? [], activeSectionId) ??

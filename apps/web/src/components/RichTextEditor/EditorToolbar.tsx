@@ -7,6 +7,7 @@ import {
   IconBulletList, IconOrderedList, IconBlockquote,
   IconAlignLeft, IconAlignCenter, IconAlignRight,
   IconImage, IconSearch, IconDownload,
+  IconPanelLeft, IconMaximize, IconMinimize,
 } from '../icons'
 
 export const FONTS = [
@@ -32,6 +33,12 @@ interface Props {
   onExportSection: () => void
   defaultFont: string
   defaultFontSize: number
+  sidebarOpen: boolean
+  onToggleSidebar: () => void
+  onToggleFocus: () => void
+  focusMode: boolean
+  focusModeEnabled: boolean
+  onNavigateReference: () => void
 }
 
 export default function EditorToolbar({
@@ -41,10 +48,14 @@ export default function EditorToolbar({
   onExportSection,
   defaultFont,
   defaultFontSize,
+  sidebarOpen,
+  onToggleSidebar,
+  onToggleFocus,
+  focusMode,
+  focusModeEnabled,
+  onNavigateReference,
 }: Props) {
   const imageInputRef = useRef<HTMLInputElement>(null)
-
-  if (!editor) return null
 
   const btnBase = 'w-7 h-7 flex items-center justify-center rounded-sm cursor-pointer transition-colors shrink-0'
   const btnActive = 'bg-active text-text'
@@ -77,88 +88,130 @@ export default function EditorToolbar({
   }
 
   return (
-    <div className="flex items-center px-3 h-9 border-b border-border bg-surface shrink-0 gap-0.5 overflow-x-auto">
+    <div className="flex items-center px-3 h-11 border-b border-border bg-surface shrink-0 gap-0.5 overflow-x-auto">
 
-      {/* Font family + size */}
-      {(() => {
-        const activeFont = editor.getAttributes('textStyle').fontFamily ?? defaultFont
-        const activeFontSize = editor.getAttributes('textStyle').fontSize
-          ? parseInt(editor.getAttributes('textStyle').fontSize as string)
-          : defaultFontSize
-        return (
-          <>
-            <select
-              className={selectClass}
-              value={activeFont}
-              onChange={e => editor.chain().focus().setFontFamily(e.target.value).run()}
-              aria-label="Font family"
-            >
-              {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-            </select>
-            <select
-              className={`${selectClass} w-12`}
-              value={activeFontSize}
-              onChange={e => editor.chain().focus().setFontSize(`${e.target.value}px`).run()}
-              aria-label="Font size"
-            >
-              {FONT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </>
-        )
-      })()}
+      {/* Sidebar toggle */}
+      {iconBtn(<IconPanelLeft size={ICON_SIZE} />, sidebarOpen, onToggleSidebar, 'Toggle sidebar')}
 
       {sep}
 
-      {/* Undo / Redo */}
-      {iconBtn(<IconUndo size={ICON_SIZE} />, false, () => editor.chain().focus().undo().run(), 'Undo')}
-      {iconBtn(<IconRedo size={ICON_SIZE} />, false, () => editor.chain().focus().redo().run(), 'Redo')}
+      {/* Formatting tools — only shown when editor is active */}
+      {editor && (
+        <>
+          {/* Font family + size */}
+          {(() => {
+            const activeFont = editor.getAttributes('textStyle').fontFamily ?? defaultFont
+            const activeFontSize = editor.getAttributes('textStyle').fontSize
+              ? parseInt(editor.getAttributes('textStyle').fontSize as string)
+              : defaultFontSize
+            return (
+              <>
+                <select
+                  className={selectClass}
+                  value={activeFont}
+                  onChange={e => editor.chain().focus().setFontFamily(e.target.value).run()}
+                  aria-label="Font family"
+                >
+                  {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                </select>
+                <select
+                  className={`${selectClass} w-12`}
+                  value={activeFontSize}
+                  onChange={e => editor.chain().focus().setFontSize(`${e.target.value}px`).run()}
+                  aria-label="Font size"
+                >
+                  {FONT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </>
+            )
+          })()}
 
-      {sep}
+          {sep}
 
-      {/* Headings */}
-      {iconBtn(<IconH1 size={ICON_SIZE} />, editor.isActive('heading', { level: 1 }), () => editor.chain().focus().toggleHeading({ level: 1 }).run(), 'Heading 1')}
-      {iconBtn(<IconH2 size={ICON_SIZE} />, editor.isActive('heading', { level: 2 }), () => editor.chain().focus().toggleHeading({ level: 2 }).run(), 'Heading 2')}
-      {iconBtn(<IconH3 size={ICON_SIZE} />, editor.isActive('heading', { level: 3 }), () => editor.chain().focus().toggleHeading({ level: 3 }).run(), 'Heading 3')}
+          {/* Undo / Redo */}
+          {iconBtn(<IconUndo size={ICON_SIZE} />, false, () => editor.chain().focus().undo().run(), 'Undo')}
+          {iconBtn(<IconRedo size={ICON_SIZE} />, false, () => editor.chain().focus().redo().run(), 'Redo')}
 
-      {sep}
+          {sep}
 
-      {/* Inline marks */}
-      {iconBtn(<IconBold size={ICON_SIZE} />, editor.isActive('bold'), () => editor.chain().focus().toggleBold().run(), 'Bold')}
-      {iconBtn(<IconItalic size={ICON_SIZE} />, editor.isActive('italic'), () => editor.chain().focus().toggleItalic().run(), 'Italic')}
-      {iconBtn(<IconUnderline size={ICON_SIZE} />, editor.isActive('underline'), () => editor.chain().focus().toggleUnderline().run(), 'Underline')}
-      {iconBtn(<IconStrike size={ICON_SIZE} />, editor.isActive('strike'), () => editor.chain().focus().toggleStrike().run(), 'Strikethrough')}
-      {iconBtn(<IconHighlight size={ICON_SIZE} />, editor.isActive('highlight'), () => editor.chain().focus().toggleHighlight().run(), 'Highlight')}
-      {iconBtn(<IconCode size={ICON_SIZE} />, editor.isActive('code'), () => editor.chain().focus().toggleCode().run(), 'Inline code')}
+          {/* Headings */}
+          {iconBtn(<IconH1 size={ICON_SIZE} />, editor.isActive('heading', { level: 1 }), () => editor.chain().focus().toggleHeading({ level: 1 }).run(), 'Heading 1')}
+          {iconBtn(<IconH2 size={ICON_SIZE} />, editor.isActive('heading', { level: 2 }), () => editor.chain().focus().toggleHeading({ level: 2 }).run(), 'Heading 2')}
+          {iconBtn(<IconH3 size={ICON_SIZE} />, editor.isActive('heading', { level: 3 }), () => editor.chain().focus().toggleHeading({ level: 3 }).run(), 'Heading 3')}
 
-      {sep}
+          {sep}
 
-      {/* Lists + blockquote */}
-      {iconBtn(<IconBulletList size={ICON_SIZE} />, editor.isActive('bulletList'), () => editor.chain().focus().toggleBulletList().run(), 'Bullet list')}
-      {iconBtn(<IconOrderedList size={ICON_SIZE} />, editor.isActive('orderedList'), () => editor.chain().focus().toggleOrderedList().run(), 'Ordered list')}
-      {iconBtn(<IconBlockquote size={ICON_SIZE} />, editor.isActive('blockquote'), () => editor.chain().focus().toggleBlockquote().run(), 'Blockquote')}
+          {/* Inline marks */}
+          {iconBtn(<IconBold size={ICON_SIZE} />, editor.isActive('bold'), () => editor.chain().focus().toggleBold().run(), 'Bold')}
+          {iconBtn(<IconItalic size={ICON_SIZE} />, editor.isActive('italic'), () => editor.chain().focus().toggleItalic().run(), 'Italic')}
+          {iconBtn(<IconUnderline size={ICON_SIZE} />, editor.isActive('underline'), () => editor.chain().focus().toggleUnderline().run(), 'Underline')}
+          {iconBtn(<IconStrike size={ICON_SIZE} />, editor.isActive('strike'), () => editor.chain().focus().toggleStrike().run(), 'Strikethrough')}
+          {iconBtn(<IconHighlight size={ICON_SIZE} />, editor.isActive('highlight'), () => editor.chain().focus().toggleHighlight().run(), 'Highlight')}
+          {iconBtn(<IconCode size={ICON_SIZE} />, editor.isActive('code'), () => editor.chain().focus().toggleCode().run(), 'Inline code')}
 
-      {sep}
+          {sep}
 
-      {/* Text alignment */}
-      {iconBtn(<IconAlignLeft size={ICON_SIZE} />, editor.isActive({ textAlign: 'left' }), () => editor.chain().focus().setTextAlign('left').run(), 'Align left')}
-      {iconBtn(<IconAlignCenter size={ICON_SIZE} />, editor.isActive({ textAlign: 'center' }), () => editor.chain().focus().setTextAlign('center').run(), 'Align center')}
-      {iconBtn(<IconAlignRight size={ICON_SIZE} />, editor.isActive({ textAlign: 'right' }), () => editor.chain().focus().setTextAlign('right').run(), 'Align right')}
+          {/* Lists + blockquote */}
+          {iconBtn(<IconBulletList size={ICON_SIZE} />, editor.isActive('bulletList'), () => editor.chain().focus().toggleBulletList().run(), 'Bullet list')}
+          {iconBtn(<IconOrderedList size={ICON_SIZE} />, editor.isActive('orderedList'), () => editor.chain().focus().toggleOrderedList().run(), 'Ordered list')}
+          {iconBtn(<IconBlockquote size={ICON_SIZE} />, editor.isActive('blockquote'), () => editor.chain().focus().toggleBlockquote().run(), 'Blockquote')}
 
-      {sep}
+          {sep}
 
-      {/* Image upload */}
-      <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-      {iconBtn(<IconImage size={ICON_SIZE} />, false, () => imageInputRef.current?.click(), 'Insert image')}
+          {/* Text alignment */}
+          {iconBtn(<IconAlignLeft size={ICON_SIZE} />, editor.isActive({ textAlign: 'left' }), () => editor.chain().focus().setTextAlign('left').run(), 'Align left')}
+          {iconBtn(<IconAlignCenter size={ICON_SIZE} />, editor.isActive({ textAlign: 'center' }), () => editor.chain().focus().setTextAlign('center').run(), 'Align center')}
+          {iconBtn(<IconAlignRight size={ICON_SIZE} />, editor.isActive({ textAlign: 'right' }), () => editor.chain().focus().setTextAlign('right').run(), 'Align right')}
 
-      {sep}
+          {sep}
 
-      {/* Find */}
-      {iconBtn(<IconSearch size={ICON_SIZE} />, searchOpen, onToggleSearch, 'Search & replace')}
+          {/* Image upload */}
+          <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+          {iconBtn(<IconImage size={ICON_SIZE} />, false, () => imageInputRef.current?.click(), 'Insert image')}
 
-      {sep}
+          {sep}
 
-      {/* Export section */}
-      {iconBtn(<IconDownload size={ICON_SIZE} />, false, onExportSection, 'Export section')}
+          {/* Find */}
+          {iconBtn(<IconSearch size={ICON_SIZE} />, searchOpen, onToggleSearch, 'Search & replace')}
+
+          {sep}
+
+          {/* Export section */}
+          {iconBtn(<IconDownload size={ICON_SIZE} />, false, onExportSection, 'Export section')}
+        </>
+      )}
+
+      {/* Right side — Reference + Focus */}
+      <div className="ml-auto flex items-center gap-1 shrink-0">
+        <button
+          type="button"
+          className="px-2.5 h-7 rounded-sm text-[0.8125rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
+          onClick={onNavigateReference}
+        >
+          Reference
+        </button>
+
+        {sep}
+
+        <button
+          type="button"
+          onClick={onToggleFocus}
+          disabled={!focusModeEnabled}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all ${
+            focusMode
+              ? 'border-navy bg-navy text-white'
+              : focusModeEnabled
+                ? 'border-border text-text-secondary hover:border-accent hover:text-accent hover:bg-accent/5 cursor-pointer'
+                : 'border-border text-text-placeholder cursor-default'
+          }`}
+        >
+          {focusMode
+            ? <IconMinimize size={12} />
+            : <IconMaximize size={12} />
+          }
+          {focusMode ? 'Exit Focus' : 'Focus'}
+        </button>
+      </div>
     </div>
   )
 }

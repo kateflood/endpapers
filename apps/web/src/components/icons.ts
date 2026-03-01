@@ -44,4 +44,8 @@ export {
   FilePen as IconFilePen,
   Sparkles as IconSparkles,
   Maximize as IconMaximize,
+  Minimize as IconMinimize,
+  PanelLeft as IconPanelLeft,
+  Clock as IconClock,
+  ChevronDown as IconChevronDown,
 } from 'lucide-react'
