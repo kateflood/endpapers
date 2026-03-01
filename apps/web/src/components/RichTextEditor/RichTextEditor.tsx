@@ -131,6 +131,11 @@ export default function RichTextEditor({ focusMode = false, onExitFocus }: RichT
         updateWordCountRef.current(activeSectionIdRef.current, countWords(text))
       }
     },
+    coreExtensionOptions: {
+      clipboardTextSerializer: {
+        blockSeparator: '\n',
+      },
+    },
   })
 
   // Cmd/Ctrl+F → open search bar
