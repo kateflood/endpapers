@@ -177,6 +177,11 @@ export default function ReferenceScreen() {
     setSelectedItemId(id)
   }, [])
 
+  const handleRenameItem = useCallback((id: string, name: string) => {
+    const item = itemsRef.current.find(i => i.id === id)
+    if (item) actions.saveItem({ ...item, name, updatedAt: todayISODate() })
+  }, [actions])
+
   // ── Group actions ──────────────────────────────────────────────────────
 
   const handleDeleteGroup = useCallback((groupId: string) => {
@@ -284,7 +289,7 @@ export default function ReferenceScreen() {
           activeTab={activeTab}
           selectedItemId={selectedItemId}
           onSelectItem={handleSelectItem}
-          onRenameItem={(id) => setSelectedItemId(id)}
+          onRenameItem={handleRenameItem}
           onDeleteItem={(id) => { actions.deleteItem(id); setSelectedItemId(null) }}
           onAdd={(type) => {
             const newItem = actions.addItem(type)

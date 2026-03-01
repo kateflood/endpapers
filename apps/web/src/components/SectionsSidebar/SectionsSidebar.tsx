@@ -18,9 +18,9 @@ import { generateId } from '@endpapers/utils'
 import type { SectionManifestEntry } from '@endpapers/types'
 import { useProject } from '../../contexts/ProjectContext'
 import { createSectionFile, deleteSectionFile } from '../../fs/projectFs'
-import { IconChevronRight } from '../icons'
-import SectionItem from './SectionItem'
-import GroupItem from './GroupItem'
+import SortableListItem from '../SortableListItem'
+import SortableGroupItem from '../SortableGroupItem'
+import CollapsibleSectionHeader from '../CollapsibleSectionHeader'
 
 // ---------------------------------------------------------------------------
 // Pure section-manifest helpers
@@ -398,88 +398,59 @@ export default function SectionsSidebar() {
     })
   }
 
-  function ZoneHeader({ label, zone, allowGroups = false }: { label: string; zone: Zone; allowGroups?: boolean }) {
-    const isCollapsed = collapsedZones.has(zone)
-    return (
-      <div className="flex items-center px-3 h-8 shrink-0 gap-1">
-        <button
-          className="w-5 h-5 flex items-center justify-center shrink-0 text-text-placeholder -ml-1"
-          onClick={() => toggleZone(zone)}
-        >
-          <IconChevronRight
-            size={12}
-            className={`transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
-          />
-        </button>
-        <span
-          className="text-[0.6875rem] font-semibold uppercase tracking-wider text-text-secondary flex-1 cursor-pointer"
-          onClick={() => toggleZone(zone)}
-        >
-          {label}
-        </span>
-        <button
-          className="h-6 px-1.5 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
-          onClick={() => { void handleAddSection(zone) }}
-          title={`Add section to ${label}`}
-        >
-          + Section
-        </button>
-        {allowGroups && (
-          <button
-            className="h-6 px-1.5 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
-            onClick={() => { void handleAddGroup(zone as 'draft' | 'drawer') }}
-            title={`Add group to ${label}`}
-          >
-            + Group
-          </button>
-        )}
-      </div>
-    )
-  }
-
   function renderEntry(entry: SectionManifestEntry) {
-    return entry.type === 'group' ? (
-      <GroupItem
-        key={entry.id}
-        group={entry}
-        isCollapsed={collapsedGroups.has(entry.id)}
-        activeSectionId={activeSectionId}
-        onToggleCollapse={id =>
-          setCollapsedGroups(prev => {
-            const next = new Set(prev)
-            if (next.has(id)) next.delete(id)
-            else next.add(id)
-            return next
-          })
-        }
-        onSelectSection={setActiveSectionId}
-        onRenameSection={handleRenameSection}
-        onDeleteSection={handleDeleteSection}
-        onRenameGroup={handleRenameGroup}
-        onDeleteGroup={handleDeleteGroup}
-        onAddSectionInGroup={handleAddSectionInGroup}
-      />
-    ) : (
-      <SectionItem
-        key={entry.id}
-        section={entry}
-        isActive={activeSectionId === entry.id}
-        onSelect={setActiveSectionId}
-        onRename={handleRenameSection}
-        onDelete={handleDeleteSection}
-      />
-    )
-  }
-
-  function renderSection(entry: SectionManifestEntry) {
+    if (entry.type === 'group') {
+      const children = entry.children ?? []
+      return (
+        <SortableGroupItem
+          key={entry.id}
+          id={entry.id}
+          title={entry.title}
+          isCollapsed={collapsedGroups.has(entry.id)}
+          childIds={children.map(c => c.id)}
+          childCount={children.length}
+          childLabel="section"
+          onToggleCollapse={() =>
+            setCollapsedGroups(prev => {
+              const next = new Set(prev)
+              if (next.has(entry.id)) next.delete(entry.id)
+              else next.add(entry.id)
+              return next
+            })
+          }
+          onRename={handleRenameGroup}
+          onDelete={handleDeleteGroup}
+          onAddChild={handleAddSectionInGroup}
+          addChildLabel="Add section inside"
+        >
+          {children.map(child => (
+            <SortableListItem
+              key={child.id}
+              id={child.id}
+              title={child.title}
+              isActive={activeSectionId === child.id}
+              indented
+              onSelect={setActiveSectionId}
+              onInlineRename={handleRenameSection}
+              onDelete={handleDeleteSection}
+              confirmDelete
+              menuLabel="Section options"
+            />
+          ))}
+        </SortableGroupItem>
+      )
+    }
     return (
-      <SectionItem
+      <SortableListItem
         key={entry.id}
-        section={entry}
+        id={entry.id}
+        title={entry.title}
         isActive={activeSectionId === entry.id}
         onSelect={setActiveSectionId}
-        onRename={handleRenameSection}
+        onInlineRename={handleRenameSection}
         onDelete={handleDeleteSection}
+        confirmDelete
+        menuLabel="Section options"
       />
     )
   }
@@ -513,7 +484,15 @@ export default function SectionsSidebar() {
 
           {/* Draft zone */}
           <div className="py-1">
-            <ZoneHeader label="Draft" zone="draft" allowGroups />
+            <CollapsibleSectionHeader
+              label="Draft"
+              isCollapsed={collapsedZones.has('draft')}
+              onToggle={() => toggleZone('draft')}
+              actions={[
+                { label: '+ Section', onClick: () => { void handleAddSection('draft') }, title: 'Add section to Draft' },
+                { label: '+ Group', onClick: () => { void handleAddGroup('draft') }, title: 'Add group to Draft' },
+              ]}
+            />
             {!collapsedZones.has('draft') && (
               <SortableContext items={draftTopLevelIds} strategy={verticalListSortingStrategy}>
                 {sections.length === 0 && (
@@ -526,7 +505,15 @@ export default function SectionsSidebar() {
 
           {/* Drawer zone */}
           <div className="border-t border-border py-1">
-            <ZoneHeader label="Drawer" zone="drawer" allowGroups />
+            <CollapsibleSectionHeader
+              label="Drawer"
+              isCollapsed={collapsedZones.has('drawer')}
+              onToggle={() => toggleZone('drawer')}
+              actions={[
+                { label: '+ Section', onClick: () => { void handleAddSection('drawer') }, title: 'Add section to Drawer' },
+                { label: '+ Group', onClick: () => { void handleAddGroup('drawer') }, title: 'Add group to Drawer' },
+              ]}
+            />
             {!collapsedZones.has('drawer') && (
               <SortableContext items={drawerTopLevelIds} strategy={verticalListSortingStrategy}>
                 {extras.length === 0 && (
@@ -539,26 +526,40 @@ export default function SectionsSidebar() {
 
           {/* Front matter zone */}
           <div className="border-t border-border py-1">
-            <ZoneHeader label="Front matter" zone="front" />
+            <CollapsibleSectionHeader
+              label="Front matter"
+              isCollapsed={collapsedZones.has('front')}
+              onToggle={() => toggleZone('front')}
+              actions={[
+                { label: '+ Section', onClick: () => { void handleAddSection('front') }, title: 'Add section to Front matter' },
+              ]}
+            />
             {!collapsedZones.has('front') && (
               <SortableContext items={frontTopLevelIds} strategy={verticalListSortingStrategy}>
                 {front.length === 0 && (
                   <p className="px-4 py-2 text-[0.8125rem] text-text-placeholder">Add front matter sections here.</p>
                 )}
-                {front.map(renderSection)}
+                {front.map(renderEntry)}
               </SortableContext>
             )}
           </div>
 
           {/* Back matter zone */}
           <div className="border-t border-border py-1">
-            <ZoneHeader label="Back matter" zone="back" />
+            <CollapsibleSectionHeader
+              label="Back matter"
+              isCollapsed={collapsedZones.has('back')}
+              onToggle={() => toggleZone('back')}
+              actions={[
+                { label: '+ Section', onClick: () => { void handleAddSection('back') }, title: 'Add section to Back matter' },
+              ]}
+            />
             {!collapsedZones.has('back') && (
               <SortableContext items={backTopLevelIds} strategy={verticalListSortingStrategy}>
                 {back.length === 0 && (
                   <p className="px-4 py-2 text-[0.8125rem] text-text-placeholder">Add back matter sections here.</p>
                 )}
-                {back.map(renderSection)}
+                {back.map(renderEntry)}
               </SortableContext>
             )}
           </div>
