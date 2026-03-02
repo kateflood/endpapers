@@ -52,6 +52,19 @@
 .ProseMirror em { font-style: italic; }
 .search-match { background-color: #ffeb3b; border-radius: 2px; }
 .search-current { background-color: #ffa724; border-radius: 2px; }
+.ai-highlight { background-color: rgba(43, 108, 176, 0.2); border-radius: 2px; }
+.ai-highlight-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  vertical-align: text-bottom;
+  background-color: var(--color-accent);
+  border-radius: 1px;
+  animation: ai-caret-blink 1s steps(2, start) infinite;
+}
+@keyframes ai-caret-blink {
+  to { opacity: 0; }
+}
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
@@ -108,3 +121,4 @@
 }
 .dark .search-match { background-color: #5c4d00; }
 .dark .search-current { background-color: #7a5500; }
+.dark .ai-highlight { background-color: rgba(91, 155, 213, 0.25); }

@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { WritingLogEntry } from '@endpapers/types'
 import { todayISODate, isThisWeek, isThisMonth, findSectionTitle, sumWritingLog } from '@endpapers/utils'
 import { useProject } from '../../contexts/ProjectContext'
 import SectionsSidebar from '../../components/SectionsSidebar/SectionsSidebar'
 import RichTextEditor from '../../components/RichTextEditor/RichTextEditor'
+import type { RichTextEditorHandle } from '../../components/RichTextEditor/RichTextEditor'
 import WritingGoalsPanel from '../../components/WritingGoalsPanel/WritingGoalsPanel'
-import { IconSettings, IconFolderOpen, IconChevronDown } from '../../components/icons'
+import AIPanel from '../../components/AIPanel/AIPanel'
+import { IconSettings, IconFolderOpen, IconChevronDown, IconSparkles } from '../../components/icons'
 
 // ── Goal progress helpers ────────────────────────────────────────────────
 
@@ -74,8 +76,10 @@ export default function EditorScreen() {
   const navigate = useNavigate()
   const { project, recentId, closeProject, activeSectionId, sectionWordCounts, writingLog, sessionStartWords, updateGoals } = useProject()
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [goalsOpen, setGoalsOpen] = useState(false)
+  type RightPanel = 'goals' | 'ai' | null
+  const [rightPanel, setRightPanel] = useState<RightPanel>(null)
   const [focusMode, setFocusMode] = useState(false)
+  const editorRef = useRef<RichTextEditorHandle>(null)
 
   const draftSectionIds = new Set(
     (project?.sections ?? []).flatMap(e =>
@@ -180,8 +184,15 @@ export default function EditorScreen() {
           {/* Right side */}
           <div className="ml-auto flex items-center gap-1">
             <button
-              className={`${titleBarBtnClass}${goalsOpen ? ' text-white/80' : ''}`}
-              onClick={() => setGoalsOpen(o => !o)}
+              className={`${titleBarBtnClass}${rightPanel === 'ai' ? ' text-white/80' : ''}`}
+              onClick={() => setRightPanel(p => p === 'ai' ? null : 'ai')}
+              title="AI Tools"
+            >
+              <IconSparkles size={13} />
+            </button>
+            <button
+              className={`${titleBarBtnClass}${rightPanel === 'goals' ? ' text-white/80' : ''}`}
+              onClick={() => setRightPanel(p => p === 'goals' ? null : 'goals')}
               title="Writing goals"
             >
               <GoalRing progress={goalProgress(
@@ -226,6 +237,7 @@ export default function EditorScreen() {
         {/* Editor area */}
         <main className="flex-1 flex overflow-hidden">
           <RichTextEditor
+            ref={editorRef}
             focusMode={focusMode}
             onExitFocus={() => setFocusMode(false)}
             sidebarOpen={sidebarOpen}
@@ -237,14 +249,31 @@ export default function EditorScreen() {
           />
         </main>
 
-        {/* Writing goals panel */}
-        {!focusMode && goalsOpen && (
+        {/* Right panels — only one at a time, hidden in focus mode */}
+        {!focusMode && rightPanel === 'goals' && (
           <WritingGoalsPanel
             writingLog={writingLog}
             sessionWords={sessionWords}
             totalWords={totalWords}
             onUpdateGoals={updateGoals}
-            onClose={() => setGoalsOpen(false)}
+            onClose={() => setRightPanel(null)}
+          />
+        )}
+        {!focusMode && rightPanel === 'ai' && (
+          <AIPanel
+            getEditorText={() => editorRef.current?.getText() ?? ''}
+            onClose={() => { editorRef.current?.clearHighlight(); setRightPanel(null) }}
+            aiEnabled={project.settings?.aiEnabled ?? false}
+            onNavigateSettings={() => navigate('/settings')}
+            applyCorrection={(start, end, replacement) => {
+              editorRef.current?.replaceTextRange(start, end, replacement)
+            }}
+            highlightTextRange={(start, end) => {
+              editorRef.current?.highlightTextRange(start, end)
+            }}
+            clearHighlight={() => {
+              editorRef.current?.clearHighlight()
+            }}
           />
         )}
       </div>

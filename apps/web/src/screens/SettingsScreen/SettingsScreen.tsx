@@ -167,6 +167,18 @@ export default function SettingsScreen() {
           </section>
 
           <section>
+            <h2 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-text-secondary mb-1">AI Tools</h2>
+            <div className="border border-border rounded-md overflow-hidden divide-y divide-border">
+              <SettingRow
+                label="Enable AI tools"
+                description="Use on-device AI models for proofreading and summarization. Your text never leaves your device."
+                checked={settings.aiEnabled ?? false}
+                onChange={v => handleUpdate({ aiEnabled: v })}
+              />
+            </div>
+          </section>
+
+          <section>
             <h2 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-text-secondary mb-1">Import & Export</h2>
             <div className="border border-border rounded-md overflow-hidden divide-y divide-border">
               <div className="flex items-center justify-between px-4 py-3 bg-surface">

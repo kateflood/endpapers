@@ -48,4 +48,8 @@ export {
   PanelLeft as IconPanelLeft,
   Clock as IconClock,
   ChevronDown as IconChevronDown,
+  Loader as IconLoader,
+  AlertCircle as IconAlertCircle,
+  SpellCheck2 as IconSpellCheck,
+  Info as IconInfo,
 } from 'lucide-react'

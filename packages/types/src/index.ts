@@ -10,6 +10,7 @@ export interface ProjectSettings {
   fontSize: number
   wordsPerPage: number
   showWordCount: boolean
+  aiEnabled?: boolean
 }
 
 export interface AuthorInfo {

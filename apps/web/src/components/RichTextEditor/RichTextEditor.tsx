@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -9,12 +9,14 @@ import Highlight from '@tiptap/extension-highlight'
 import { TextStyle } from '@tiptap/extension-text-style'
 import { FontFamily } from '@tiptap/extension-font-family'
 import { FontSize } from './fontSizeExtension'
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { SectionManifestEntry, ProjectSettings } from '@endpapers/types'
 import { countWords, findSectionTitle } from '@endpapers/utils'
 import { useProject } from '../../contexts/ProjectContext'
 import { useToast } from '../../contexts/ToastContext'
 import { readSectionFile, writeSectionFile } from '../../fs/projectFs'
 import { SearchReplace } from './searchExtension'
+import { AIHighlight } from './aiHighlightExtension'
 import { IconClose, IconClock } from '../icons'
 import EditorToolbar from './EditorToolbar'
 import SearchBar from './SearchBar'
@@ -53,7 +55,49 @@ interface RichTextEditorProps {
   onNavigateReference: () => void
 }
 
-export default function RichTextEditor({
+/** Map a character offset in editor.getText() output to a ProseMirror position. */
+function textOffsetToPos(doc: ProseMirrorNode, targetOffset: number): number | null {
+  let textOffset = 0
+  let result: number | null = null
+  let isFirstBlock = true
+
+  doc.descendants((node, pos) => {
+    if (result !== null) return false
+    if (node.isTextblock) {
+      // editor.getText() inserts '\n\n' between blocks by default
+      if (!isFirstBlock) {
+        textOffset += 2
+        if (targetOffset <= textOffset) {
+          result = pos + 1
+          return false
+        }
+      }
+      isFirstBlock = false
+    }
+    if (node.isText && node.text) {
+      const len = node.text.length
+      if (textOffset + len > targetOffset) {
+        result = pos + (targetOffset - textOffset)
+        return false
+      }
+      textOffset += len
+    }
+  })
+
+  if (result === null && targetOffset === textOffset) {
+    result = doc.content.size
+  }
+  return result
+}
+
+export interface RichTextEditorHandle {
+  getText: () => string
+  replaceTextRange: (startIndex: number, endIndex: number, replacement: string) => void
+  highlightTextRange: (startIndex: number, endIndex: number) => void
+  clearHighlight: () => void
+}
+
+const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(function RichTextEditor({
   focusMode = false,
   onExitFocus,
   sidebarOpen,
@@ -62,7 +106,7 @@ export default function RichTextEditor({
   focusModeEnabled,
   totalWords,
   onNavigateReference,
-}: RichTextEditorProps) {
+}, ref) {
   const { project, handle, activeSectionId, sectionWordCounts, updateSectionWordCount } = useProject()
   const { showToast } = useToast()
   const settings: ProjectSettings = { ...DEFAULTS, ...project?.settings }
@@ -107,6 +151,7 @@ export default function RichTextEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
       SearchReplace,
+      AIHighlight,
       Placeholder.configure({ placeholder: 'Start writing…' }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Image,
@@ -138,6 +183,35 @@ export default function RichTextEditor({
       },
     },
   })
+
+  useImperativeHandle(ref, () => ({
+    getText: () => editor?.getText() ?? '',
+    replaceTextRange: (startIndex: number, endIndex: number, replacement: string) => {
+      if (!editor) return
+      const from = textOffsetToPos(editor.state.doc, startIndex)
+      const to = textOffsetToPos(editor.state.doc, endIndex)
+      if (from !== null && to !== null) {
+        editor.chain().focus().insertContentAt({ from, to }, replacement).run()
+      }
+    },
+    highlightTextRange: (startIndex: number, endIndex: number) => {
+      if (!editor) return
+      const from = textOffsetToPos(editor.state.doc, startIndex)
+      const to = textOffsetToPos(editor.state.doc, endIndex)
+      if (from !== null && to !== null) {
+        editor.commands.setAIHighlight(from, to)
+        // Scroll the decoration into view after it renders
+        requestAnimationFrame(() => {
+          const el = editor.view.dom.querySelector('.ai-highlight, .ai-highlight-caret')
+          el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        })
+      }
+    },
+    clearHighlight: () => {
+      if (!editor) return
+      editor.commands.clearAIHighlight()
+    },
+  }), [editor])
 
   // Cmd/Ctrl+F → open search bar
   useEffect(() => {
@@ -297,4 +371,6 @@ export default function RichTextEditor({
       })()}
     </div>
   )
-}
+})
+
+export default RichTextEditor
