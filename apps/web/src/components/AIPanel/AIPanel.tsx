@@ -737,7 +737,6 @@ export default function AIPanel({
       <div className="flex items-center px-4 h-12 border-b border-border shrink-0 gap-2">
         <IconSparkles size={14} className="text-accent shrink-0" />
         <span className="text-[0.9375rem] font-medium text-text">AI Tools</span>
-
         {/* Tabs */}
         {aiEnabled && (
           <div className="flex items-center gap-1 ml-auto mr-1">

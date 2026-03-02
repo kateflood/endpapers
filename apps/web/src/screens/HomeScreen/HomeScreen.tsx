@@ -302,6 +302,31 @@ export default function HomeScreen() {
           </div>
         </div>
 
+        {/* AI Tools */}
+        <div className="mb-14">
+          <div className="bg-surface border border-border rounded-[14px] p-7 flex flex-col sm:flex-row items-start gap-5">
+            <div className="w-12 h-12 rounded-2xl bg-accent/[0.08] flex items-center justify-center shrink-0">
+              <IconSparkles size={22} className="text-accent" />
+            </div>
+            <div>
+              <h3 className="text-[1.0625rem] font-semibold text-text mb-1.5">A word about AI</h3>
+              <p className="text-[0.875rem] text-text-secondary leading-relaxed mb-3">
+                We believe in privacy and protecting your IP but we also believe you should have access to the tools 
+                and technology that AI can support - which is why we support private, on device AI.
+                Proofread your spelling and grammar, summarize sections, and more — all using
+                AI models that run entirely on your device. Your text never leaves your machine.
+              </p>
+              <button
+                className="text-[0.875rem] text-accent hover:underline cursor-pointer transition-colors flex items-center gap-1"
+                onClick={() => navigate('/ai')}
+              >
+                Learn more
+                <IconArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Privacy banner */}
         <div className="dark-privacy rounded-2xl px-8 sm:px-12 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8 mb-14 animate-in animate-in-4">
           <div>
@@ -354,6 +379,7 @@ export default function HomeScreen() {
                 <FooterLink href="#features">Features</FooterLink>
                 <FooterLink href="#pricing">Pricing</FooterLink>
                 <FooterLink onClick={() => navigate('/help')}>Docs</FooterLink>
+                <FooterLink onClick={() => navigate('/ai')}>AI Tools</FooterLink>
               </div>
             </div>
             {/* Company links */}

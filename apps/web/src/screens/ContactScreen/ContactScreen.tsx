@@ -29,12 +29,7 @@ export default function ContactScreen() {
           <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
             <div>
               <h2 className="text-[0.875rem] font-semibold text-text mb-1">Email</h2>
-              <a
-                href="mailto:hello@endpapers.app"
-                className="text-accent hover:underline"
-              >
-                hello@endpapers.app
-              </a>
+              <div>Coming Soon!</div>
             </div>
 
             <div>
