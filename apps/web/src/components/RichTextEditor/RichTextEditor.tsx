@@ -52,7 +52,6 @@ interface RichTextEditorProps {
   onToggleFocus: () => void
   focusModeEnabled: boolean
   totalWords: number
-  onNavigateReference: () => void
 }
 
 /** Map a character offset in editor.getText() output to a ProseMirror position. */
@@ -105,7 +104,6 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
   onToggleFocus,
   focusModeEnabled,
   totalWords,
-  onNavigateReference,
 }, ref) {
   const { project, handle, activeSectionId, sectionWordCounts, updateSectionWordCount } = useProject()
   const { showToast } = useToast()
@@ -149,7 +147,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3] }, underline: false }),
       SearchReplace,
       AIHighlight,
       Placeholder.configure({ placeholder: 'Start writing…' }),
@@ -310,7 +308,6 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
           onToggleFocus={onToggleFocus}
           focusMode={focusMode}
           focusModeEnabled={focusModeEnabled}
-          onNavigateReference={onNavigateReference}
         />
       )}
       <div className={`flex-1 overflow-y-auto${settings.paperMode && !focusMode ? ' bg-bg py-10 px-6' : ''}`}>

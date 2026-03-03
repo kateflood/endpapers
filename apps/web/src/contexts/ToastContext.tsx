@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 interface Toast {
   id: number
@@ -32,7 +33,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {toasts.length > 0 && (
+      {toasts.length > 0 && createPortal(
         <div className="fixed bottom-4 right-4 z-[200] flex flex-col gap-2 max-w-[360px]">
           {toasts.map(toast => (
             <div
@@ -52,7 +53,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               </button>
             </div>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </ToastContext.Provider>
   )

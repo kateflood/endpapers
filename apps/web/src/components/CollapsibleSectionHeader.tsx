@@ -1,9 +1,10 @@
+import type { LucideIcon } from 'lucide-react'
 import { IconChevronRight } from './icons'
 
 interface HeaderAction {
-  label: string
+  icon: LucideIcon
   onClick: () => void
-  title?: string
+  title: string
 }
 
 interface Props {
@@ -40,12 +41,12 @@ export default function CollapsibleSectionHeader({
       </span>
       {actions.map(action => (
         <button
-          key={action.label}
-          className="h-6 px-1.5 rounded-sm text-[0.75rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
+          key={action.title}
+          className="w-6 h-6 flex items-center justify-center rounded-sm text-text-placeholder hover:text-text hover:bg-hover transition-colors cursor-pointer"
           onClick={e => { e.stopPropagation(); action.onClick() }}
           title={action.title}
         >
-          {action.label}
+          <action.icon size={14} />
         </button>
       ))}
     </div>

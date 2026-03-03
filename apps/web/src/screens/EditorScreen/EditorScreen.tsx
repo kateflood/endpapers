@@ -8,7 +8,7 @@ import RichTextEditor from '../../components/RichTextEditor/RichTextEditor'
 import type { RichTextEditorHandle } from '../../components/RichTextEditor/RichTextEditor'
 import WritingGoalsPanel from '../../components/WritingGoalsPanel/WritingGoalsPanel'
 import AIPanel from '../../components/AIPanel/AIPanel'
-import { IconSettings, IconFolderOpen, IconChevronDown, IconSparkles } from '../../components/icons'
+import { IconSettings, IconFolderOpen, IconChevronDown, IconSparkles, IconBookOpen } from '../../components/icons'
 
 // ── Goal progress helpers ────────────────────────────────────────────────
 
@@ -184,6 +184,13 @@ export default function EditorScreen() {
           {/* Right side */}
           <div className="ml-auto flex items-center gap-1">
             <button
+              className={titleBarBtnClass}
+              onClick={() => navigate('/reference')}
+              title="Reference"
+            >
+              <IconBookOpen size={13} />
+            </button>
+            <button
               className={`${titleBarBtnClass}${rightPanel === 'ai' ? ' text-white/80' : ''}`}
               onClick={() => setRightPanel(p => p === 'ai' ? null : 'ai')}
               title="AI Tools"
@@ -245,7 +252,6 @@ export default function EditorScreen() {
             onToggleFocus={() => setFocusMode(f => f ? false : !!activeSectionId)}
             focusModeEnabled={!!activeSectionId}
             totalWords={totalWords}
-            onNavigateReference={() => navigate('/reference')}
           />
         </main>
 

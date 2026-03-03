@@ -18,7 +18,7 @@ import {
 } from '@dnd-kit/sortable'
 import type { ReferenceCollection, ReferenceItem, ReferenceManifestEntry } from '@endpapers/types'
 import { generateId } from '@endpapers/utils'
-import { IconGrip } from '../icons'
+import { IconGrip, IconPlus, IconFolderOpen } from '../icons'
 import SortableListItem from '../SortableListItem'
 import SortableGroupItem from '../SortableGroupItem'
 import CollapsibleSectionHeader from '../CollapsibleSectionHeader'
@@ -198,8 +198,8 @@ export default function ReferenceSidebar({
                 onToggle={() => toggleType(col.type)}
                 onLabelClick={() => handleTypeClick(col.type)}
                 actions={[
-                  { label: '+ Item', onClick: () => onAdd(col.type), title: `Add ${col.label.replace(/s$/, '').toLowerCase()}` },
-                  { label: '+ Group', onClick: () => handleCreateGroup(col.type), title: `Add group to ${col.label.toLowerCase()}` },
+                  { icon: IconPlus, onClick: () => onAdd(col.type), title: `Add ${col.label.replace(/s$/, '').toLowerCase()}` },
+                  { icon: IconFolderOpen, onClick: () => handleCreateGroup(col.type), title: `Add group` },
                 ]}
               />
 

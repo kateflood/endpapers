@@ -38,7 +38,6 @@ interface Props {
   onToggleFocus: () => void
   focusMode: boolean
   focusModeEnabled: boolean
-  onNavigateReference: () => void
 }
 
 export default function EditorToolbar({
@@ -53,7 +52,6 @@ export default function EditorToolbar({
   onToggleFocus,
   focusMode,
   focusModeEnabled,
-  onNavigateReference,
 }: Props) {
   const imageInputRef = useRef<HTMLInputElement>(null)
 
@@ -181,18 +179,8 @@ export default function EditorToolbar({
         </>
       )}
 
-      {/* Right side — Reference + Focus */}
+      {/* Right side — Focus */}
       <div className="ml-auto flex items-center gap-1 shrink-0">
-        <button
-          type="button"
-          className="px-2.5 h-7 rounded-sm text-[0.8125rem] text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
-          onClick={onNavigateReference}
-        >
-          Reference
-        </button>
-
-        {sep}
-
         <button
           type="button"
           onClick={onToggleFocus}

@@ -21,6 +21,7 @@ import { createSectionFile, deleteSectionFile } from '../../fs/projectFs'
 import SortableListItem from '../SortableListItem'
 import SortableGroupItem from '../SortableGroupItem'
 import CollapsibleSectionHeader from '../CollapsibleSectionHeader'
+import { IconPlus, IconFolderOpen } from '../icons'
 
 // ---------------------------------------------------------------------------
 // Pure section-manifest helpers
@@ -489,8 +490,8 @@ export default function SectionsSidebar() {
               isCollapsed={collapsedZones.has('draft')}
               onToggle={() => toggleZone('draft')}
               actions={[
-                { label: '+ Section', onClick: () => { void handleAddSection('draft') }, title: 'Add section to Draft' },
-                { label: '+ Group', onClick: () => { void handleAddGroup('draft') }, title: 'Add group to Draft' },
+                { icon: IconPlus, onClick: () => { void handleAddSection('draft') }, title: 'Add section' },
+                { icon: IconFolderOpen, onClick: () => { void handleAddGroup('draft') }, title: 'Add group' },
               ]}
             />
             {!collapsedZones.has('draft') && (
@@ -510,8 +511,8 @@ export default function SectionsSidebar() {
               isCollapsed={collapsedZones.has('drawer')}
               onToggle={() => toggleZone('drawer')}
               actions={[
-                { label: '+ Section', onClick: () => { void handleAddSection('drawer') }, title: 'Add section to Drawer' },
-                { label: '+ Group', onClick: () => { void handleAddGroup('drawer') }, title: 'Add group to Drawer' },
+                { icon: IconPlus, onClick: () => { void handleAddSection('drawer') }, title: 'Add section' },
+                { icon: IconFolderOpen, onClick: () => { void handleAddGroup('drawer') }, title: 'Add group' },
               ]}
             />
             {!collapsedZones.has('drawer') && (
@@ -531,7 +532,7 @@ export default function SectionsSidebar() {
               isCollapsed={collapsedZones.has('front')}
               onToggle={() => toggleZone('front')}
               actions={[
-                { label: '+ Section', onClick: () => { void handleAddSection('front') }, title: 'Add section to Front matter' },
+                { icon: IconPlus, onClick: () => { void handleAddSection('front') }, title: 'Add section' },
               ]}
             />
             {!collapsedZones.has('front') && (
@@ -551,7 +552,7 @@ export default function SectionsSidebar() {
               isCollapsed={collapsedZones.has('back')}
               onToggle={() => toggleZone('back')}
               actions={[
-                { label: '+ Section', onClick: () => { void handleAddSection('back') }, title: 'Add section to Back matter' },
+                { icon: IconPlus, onClick: () => { void handleAddSection('back') }, title: 'Add section' },
               ]}
             />
             {!collapsedZones.has('back') && (
