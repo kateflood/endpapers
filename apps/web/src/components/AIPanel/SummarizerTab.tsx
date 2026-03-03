@@ -1,23 +1,31 @@
 import { useEffect, useRef, useState } from 'react'
+import type { AIBackend } from '@endpapers/types'
 import { useToast } from '../../contexts/ToastContext'
+import { useProject } from '../../contexts/ProjectContext'
+import { readAllSectionsAsText } from '../../fs/projectFs'
 import { IconSparkles, IconDownload, IconLoader } from '../icons'
 import type { ProviderAvailability, SummarizerProvider } from '../../ai/types'
 import { getSummarizerProviders } from '../../ai/providers'
+import { terminateWorker } from '../../ai/transformersWorkerClient'
 import {
   type ToolState,
   actionBtnClass, cancelBtnClass,
   DownloadProgressBar, CenteredState, AvailabilityBadge,
 } from './shared'
 
+type SummaryScope = 'section' | 'draft'
+
 interface SummarizerTabProps {
   getEditorText: () => string
+  backend: AIBackend
 }
 
-export default function SummarizerTab({ getEditorText }: SummarizerTabProps) {
+export default function SummarizerTab({ getEditorText, backend }: SummarizerTabProps) {
   const { showToast } = useToast()
+  const { project, handle } = useProject()
 
-  // Provider (resolved once on mount)
-  const [provider] = useState<SummarizerProvider>(() => getSummarizerProviders()[0])
+  // Provider (resolved via availability check)
+  const [provider, setProvider] = useState<SummarizerProvider | null>(null)
 
   // Availability
   const [availability, setAvailability] = useState<ProviderAvailability | 'checking'>('checking')
@@ -28,28 +36,54 @@ export default function SummarizerTab({ getEditorText }: SummarizerTabProps) {
   const [summaryResult, setSummaryResult] = useState('')
   const [summaryType, setSummaryType] = useState<SummarizerType>('key-points')
   const [summaryLength, setSummaryLength] = useState<SummarizerLength>('medium')
+  const [scope, setScope] = useState<SummaryScope>('section')
   const activeProviderRef = useRef<SummarizerProvider | null>(null)
 
-  // Check availability on mount
+  // Resolve best available provider on mount / backend change
   useEffect(() => {
-    provider.checkAvailability()
-      .then(setAvailability)
-      .catch(() => setAvailability('unavailable'))
-  }, [])
+    let cancelled = false
+    async function resolve() {
+      const providers = getSummarizerProviders(backend)
+      for (const p of providers) {
+        const avail = await p.checkAvailability()
+        if (cancelled) return
+        if (avail !== 'unavailable') {
+          setProvider(p)
+          setAvailability(avail)
+          return
+        }
+      }
+      if (!cancelled) {
+        setProvider(providers[providers.length - 1])
+        setAvailability('unavailable')
+      }
+    }
+    setAvailability('checking')
+    resolve()
+    return () => { cancelled = true }
+  }, [backend])
 
   // ── Handlers ──────────────────────────────────────────────────
 
   async function handleRun() {
-    const text = getEditorText()
+    let text: string
+    if (scope === 'draft' && handle && project) {
+      text = await readAllSectionsAsText(handle, project.sections)
+    } else {
+      text = getEditorText()
+    }
     if (!text.trim()) {
       showToast('No text to summarize. Write something first.', 'info')
       return
     }
+    if (!provider) return
     setToolState('downloading')
     setProgress(null)
     setSummaryResult('')
 
-    const runProvider = getSummarizerProviders()[0]
+    // Create a fresh provider instance for this run
+    const providers = getSummarizerProviders(backend)
+    const runProvider = providers.find(p => p.id === provider.id) ?? providers[0]
     activeProviderRef.current = runProvider
 
     try {
@@ -75,8 +109,12 @@ export default function SummarizerTab({ getEditorText }: SummarizerTabProps) {
   }
 
   function handleCancel() {
+    const wasRunning = toolState === 'running'
     if (activeProviderRef.current) {
       activeProviderRef.current.cancel()
+      if (wasRunning && activeProviderRef.current.id === 'transformers') {
+        terminateWorker()
+      }
       activeProviderRef.current = null
     }
     setToolState('idle')
@@ -108,10 +146,18 @@ export default function SummarizerTab({ getEditorText }: SummarizerTabProps) {
       >
         <div className="w-full rounded-md border border-border bg-surface p-3 text-left space-y-2">
           <p className="text-[0.75rem] font-medium text-text-secondary">Model</p>
-          <p className="text-[0.8125rem] text-text font-medium">{provider.label}</p>
-          <p className="text-[0.75rem] text-text-placeholder">{provider.description}</p>
+          <p className="text-[0.8125rem] text-text font-medium">{provider?.label}</p>
+          <p className="text-[0.75rem] text-text-placeholder">{provider?.description}</p>
         </div>
-        <div className="flex items-center gap-2 w-full">
+        <div className="flex items-center gap-2 w-full flex-wrap">
+          <select
+            className={selectClass}
+            value={scope}
+            onChange={e => setScope(e.target.value as SummaryScope)}
+          >
+            <option value="section">Current Section</option>
+            <option value="draft">Entire Draft</option>
+          </select>
           <select
             className={selectClass}
             value={summaryType}
@@ -150,7 +196,7 @@ export default function SummarizerTab({ getEditorText }: SummarizerTabProps) {
       <CenteredState
         icon={<IconDownload size={24} className="text-accent" />}
         title="Downloading model…"
-        subtitle={provider.label}
+        subtitle={provider?.label ?? ''}
       >
         <DownloadProgressBar progress={progress} />
         <p className="text-[0.75rem] text-text-placeholder">Only downloaded once. Stored locally.</p>
@@ -175,7 +221,15 @@ export default function SummarizerTab({ getEditorText }: SummarizerTabProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="px-4 py-3 border-b border-border shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            className={selectClass}
+            value={scope}
+            onChange={e => setScope(e.target.value as SummaryScope)}
+          >
+            <option value="section">Current Section</option>
+            <option value="draft">Entire Draft</option>
+          </select>
           <select
             className={selectClass}
             value={summaryType}

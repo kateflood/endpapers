@@ -1,22 +1,50 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProject } from '../../contexts/ProjectContext'
-import type { ProjectSettings, ProjectType, AuthorInfo } from '@endpapers/types'
+import type { ProjectSettings, ProjectType, AuthorInfo, AIBackend } from '@endpapers/types'
 import { FONTS, FONT_SIZES } from '../../components/RichTextEditor/EditorToolbar'
 import { PROJECT_TYPES } from '../../components/NewProjectDialog/NewProjectDialog'
 import { IconArrowLeft } from '../../components/icons'
 import ImportDialog from '../../components/ImportDialog/ImportDialog'
 import ExportDialog from '../../components/ExportDialog/ExportDialog'
+import { getCachedModels, deleteModel, deleteAllModels, type CachedModelInfo } from '../../ai/modelCache'
+import { terminateWorker } from '../../ai/transformersWorkerClient'
 
 export default function SettingsScreen() {
   const navigate = useNavigate()
   const { project, handle, updateSettings, updateProjectMeta } = useProject()
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [cachedModels, setCachedModels] = useState<CachedModelInfo[]>([])
+  const [modelsLoading, setModelsLoading] = useState(true)
 
   useEffect(() => {
     if (!project) navigate('/', { replace: true })
   }, [project, navigate])
+
+  // Load cached model info
+  useEffect(() => {
+    loadCachedModels()
+  }, [])
+
+  async function loadCachedModels() {
+    setModelsLoading(true)
+    const models = await getCachedModels()
+    setCachedModels(models)
+    setModelsLoading(false)
+  }
+
+  async function handleDeleteModel(model: CachedModelInfo) {
+    terminateWorker() // kill any active worker so deleted model isn't held in memory
+    await deleteModel(model)
+    await loadCachedModels()
+  }
+
+  async function handleDeleteAllModels() {
+    terminateWorker()
+    await deleteAllModels()
+    await loadCachedModels()
+  }
 
   if (!project) return null
 
@@ -175,8 +203,75 @@ export default function SettingsScreen() {
                 checked={settings.aiEnabled ?? false}
                 onChange={v => handleUpdate({ aiEnabled: v })}
               />
+              {(settings.aiEnabled ?? false) && (
+                <SettingSelectRow
+                  label="AI backend"
+                  description="Choose which on-device AI engine to use."
+                  value={settings.aiBackend ?? 'auto'}
+                  options={[
+                    { label: 'Auto (Chrome AI if available)', value: 'auto' },
+                    { label: 'Chrome Built-in AI', value: 'chrome' },
+                    { label: 'Open Source sLLM (any browser)', value: 'transformers' },
+                  ]}
+                  onChange={v => handleUpdate({ aiBackend: v as AIBackend })}
+                />
+              )}
             </div>
           </section>
+
+          {(settings.aiEnabled ?? false) && (
+            <section>
+              <h2 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-text-secondary mb-1">Downloaded Models</h2>
+              <div className="border border-border rounded-md overflow-hidden divide-y divide-border">
+                {modelsLoading ? (
+                  <div className="px-4 py-3 bg-surface text-[0.8125rem] text-text-secondary">
+                    Checking cached models…
+                  </div>
+                ) : (
+                  <>
+                    {cachedModels.map(model => (
+                      <div key={model.id} className="flex items-center justify-between px-4 py-3 bg-surface">
+                        <div>
+                          <div className="text-[0.9375rem] text-text">{model.label}</div>
+                          <div className="text-[0.8125rem] text-text-secondary mt-0.5">
+                            {model.cached
+                              ? <><span className="text-accent">Cached</span> · {model.approxSize}</>
+                              : 'Not downloaded'}
+                          </div>
+                        </div>
+                        {model.cached && (
+                          <button
+                            className="px-3 h-7 rounded-sm text-[0.8125rem] border border-border text-danger hover:bg-danger/10 transition-colors cursor-pointer shrink-0 ml-6"
+                            onClick={() => handleDeleteModel(model)}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between px-4 py-3 bg-surface">
+                      <div>
+                        <div className="text-[0.9375rem] text-text">Chrome Built-in AI</div>
+                        <div className="text-[0.8125rem] text-text-secondary mt-0.5">
+                          Managed by Chrome. Open <span className="font-mono text-[0.75rem]">chrome://on-device-internals</span> to manage.
+                        </div>
+                      </div>
+                    </div>
+                    {cachedModels.some(m => m.cached) && (
+                      <div className="px-4 py-3 bg-surface">
+                        <button
+                          className="px-3 h-7 rounded-sm text-[0.8125rem] border border-border text-danger hover:bg-danger/10 transition-colors cursor-pointer"
+                          onClick={handleDeleteAllModels}
+                        >
+                          Delete all cached models
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </section>
+          )}
 
           <section>
             <h2 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-text-secondary mb-1">Import & Export</h2>

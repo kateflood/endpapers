@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { AIBackend } from '@endpapers/types'
 import { IconSparkles, IconClose } from '../icons'
 import { actionBtnClass, CenteredState } from './shared'
 import ProofreaderTab from './ProofreaderTab'
@@ -10,6 +11,7 @@ interface AIPanelProps {
   getEditorText: () => string
   onClose: () => void
   aiEnabled: boolean
+  aiBackend: AIBackend
   onNavigateSettings: () => void
   applyCorrection: (startIndex: number, endIndex: number, replacement: string) => void
   highlightTextRange: (startIndex: number, endIndex: number) => void
@@ -17,7 +19,7 @@ interface AIPanelProps {
 }
 
 export default function AIPanel({
-  getEditorText, onClose, aiEnabled, onNavigateSettings, applyCorrection, highlightTextRange, clearHighlight,
+  getEditorText, onClose, aiEnabled, aiBackend, onNavigateSettings, applyCorrection, highlightTextRange, clearHighlight,
 }: AIPanelProps) {
   const [activeTab, setActiveTab] = useState<AITab>('proofread')
 
@@ -75,9 +77,10 @@ export default function AIPanel({
             applyCorrection={applyCorrection}
             highlightTextRange={highlightTextRange}
             clearHighlight={clearHighlight}
+            backend={aiBackend}
           />
         ) : (
-          <SummarizerTab getEditorText={getEditorText} />
+          <SummarizerTab getEditorText={getEditorText} backend={aiBackend} />
         )}
       </div>
     </aside>

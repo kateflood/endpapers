@@ -182,14 +182,14 @@ export default function HomeScreen() {
                 Endpapers requires Chrome or Edge for local file access.
               </p>
             )}
-            {recents.length === 0 && (
+           </div>
+            <div className="flex gap-3.5 flex-wrap justify-center mt-5">
               <button
                 className="inline-flex items-center gap-2 rounded-[10px] px-7 py-3.5 text-[0.9375rem] font-medium text-white cursor-pointer transition-all hover:-translate-y-px bg-white/8 border border-white/18"
                 onClick={() => { openDemoProject(); navigate('/editor') }}
               >
                 Try the Demo
               </button>
-            )}
           </div>
 
           {error && (

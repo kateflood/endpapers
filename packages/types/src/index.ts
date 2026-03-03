@@ -2,6 +2,8 @@
 
 export type ProjectType = 'fiction' | 'non-fiction' | 'stories' | 'essays' | 'article' | 'script' | 'custom'
 
+export type AIBackend = 'auto' | 'chrome' | 'transformers'
+
 export interface ProjectSettings {
   spellCheck: boolean
   paperMode: boolean
@@ -11,6 +13,7 @@ export interface ProjectSettings {
   wordsPerPage: number
   showWordCount: boolean
   aiEnabled?: boolean
+  aiBackend?: AIBackend
 }
 
 export interface AuthorInfo {

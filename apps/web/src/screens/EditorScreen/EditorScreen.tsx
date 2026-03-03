@@ -270,6 +270,7 @@ export default function EditorScreen() {
             getEditorText={() => editorRef.current?.getText() ?? ''}
             onClose={() => { editorRef.current?.clearHighlight(); setRightPanel(null) }}
             aiEnabled={project.settings?.aiEnabled ?? false}
+            aiBackend={project.settings?.aiBackend ?? 'auto'}
             onNavigateSettings={() => navigate('/settings')}
             applyCorrection={(start, end, replacement) => {
               editorRef.current?.replaceTextRange(start, end, replacement)

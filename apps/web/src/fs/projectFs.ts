@@ -476,6 +476,28 @@ export async function readSectionFile(
   return file.text()
 }
 
+/**
+ * Read all section files from a manifest and return concatenated plain text.
+ */
+export async function readAllSectionsAsText(
+  handle: FileSystemDirectoryHandle,
+  sections: SectionManifestEntry[],
+): Promise<string> {
+  const flat = sections.flatMap(e =>
+    e.type === 'section' ? [e] : (e.children ?? [])
+  )
+  const texts: string[] = []
+  for (const entry of flat) {
+    if (!entry.file) continue
+    try {
+      const html = await readSectionFile(handle, entry.file)
+      const doc = new DOMParser().parseFromString(html, 'text/html')
+      texts.push(doc.body.textContent ?? '')
+    } catch { /* skip missing files */ }
+  }
+  return texts.filter(t => t.trim()).join('\n\n')
+}
+
 export async function writeSectionFile(
   handle: FileSystemDirectoryHandle,
   filename: string,

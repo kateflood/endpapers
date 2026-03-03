@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import type { AIBackend } from '@endpapers/types'
 import { useToast } from '../../contexts/ToastContext'
 import { IconSpellCheck, IconCheckCircle, IconDownload, IconLoader } from '../icons'
 import type { ProviderAvailability, ProofreaderProvider } from '../../ai/types'
 import { getProofreaderProviders } from '../../ai/providers'
+import { terminateWorker } from '../../ai/transformersWorkerClient'
 import { CorrectionCard, type TrackedCorrection } from './CorrectionCard'
 import {
   type ToolState,
@@ -15,15 +17,16 @@ interface ProofreaderTabProps {
   applyCorrection: (startIndex: number, endIndex: number, replacement: string) => void
   highlightTextRange: (startIndex: number, endIndex: number) => void
   clearHighlight: () => void
+  backend: AIBackend
 }
 
 export default function ProofreaderTab({
-  getEditorText, applyCorrection, highlightTextRange, clearHighlight,
+  getEditorText, applyCorrection, highlightTextRange, clearHighlight, backend,
 }: ProofreaderTabProps) {
   const { showToast } = useToast()
 
-  // Provider (resolved once on mount)
-  const [provider] = useState<ProofreaderProvider>(() => getProofreaderProviders()[0])
+  // Provider (resolved via availability check)
+  const [provider, setProvider] = useState<ProofreaderProvider | null>(null)
 
   // Availability
   const [availability, setAvailability] = useState<ProviderAvailability | 'checking'>('checking')
@@ -51,12 +54,30 @@ export default function ProofreaderTab({
     }
   }, [activeIndex])
 
-  // Check availability on mount
+  // Resolve best available provider on mount / backend change
   useEffect(() => {
-    provider.checkAvailability()
-      .then(setAvailability)
-      .catch(() => setAvailability('unavailable'))
-  }, [])
+    let cancelled = false
+    async function resolve() {
+      const providers = getProofreaderProviders(backend)
+      for (const p of providers) {
+        const avail = await p.checkAvailability()
+        if (cancelled) return
+        if (avail !== 'unavailable') {
+          setProvider(p)
+          setAvailability(avail)
+          return
+        }
+      }
+      // All unavailable — use last one and show unavailable state
+      if (!cancelled) {
+        setProvider(providers[providers.length - 1])
+        setAvailability('unavailable')
+      }
+    }
+    setAvailability('checking')
+    resolve()
+    return () => { cancelled = true }
+  }, [backend])
 
   // ── Handlers ──────────────────────────────────────────────────
 
@@ -66,13 +87,16 @@ export default function ProofreaderTab({
       showToast('No text to proofread. Write something first.', 'info')
       return
     }
+    if (!provider) return
     clearHighlight()
     setToolState('downloading')
     setProgress(null)
     setCorrections([])
     setActiveIndex(0)
 
-    const runProvider = getProofreaderProviders()[0]
+    // Create a fresh provider instance for this run
+    const providers = getProofreaderProviders(backend)
+    const runProvider = providers.find(p => p.id === provider.id) ?? providers[0]
     activeProviderRef.current = runProvider
 
     try {
@@ -101,8 +125,14 @@ export default function ProofreaderTab({
   }
 
   function handleCancel() {
+    const wasRunning = toolState === 'running'
     if (activeProviderRef.current) {
       activeProviderRef.current.cancel()
+      // Force-terminate the worker during inference — WASM blocks the thread
+      // so the cancel postMessage can't be processed until inference finishes
+      if (wasRunning && activeProviderRef.current.id === 'transformers') {
+        terminateWorker()
+      }
       activeProviderRef.current = null
     }
     clearHighlight()
@@ -208,8 +238,8 @@ export default function ProofreaderTab({
       >
         <div className="w-full rounded-md border border-border bg-surface p-3 text-left space-y-1">
           <p className="text-[0.75rem] font-medium text-text-secondary">Model</p>
-          <p className="text-[0.8125rem] text-text font-medium">{provider.label}</p>
-          <p className="text-[0.75rem] text-text-placeholder">{provider.description}</p>
+          <p className="text-[0.8125rem] text-text font-medium">{provider?.label}</p>
+          <p className="text-[0.75rem] text-text-placeholder">{provider?.description}</p>
         </div>
         <AvailabilityBadge availability={availability} />
         <button
@@ -229,7 +259,7 @@ export default function ProofreaderTab({
       <CenteredState
         icon={<IconDownload size={24} className="text-accent" />}
         title="Downloading model…"
-        subtitle={provider.label}
+        subtitle={provider?.label ?? ''}
       >
         <DownloadProgressBar progress={progress} />
         <p className="text-[0.75rem] text-text-placeholder">Only downloaded once. Stored locally.</p>

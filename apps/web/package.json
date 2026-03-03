@@ -16,6 +16,7 @@
     "@endpapers/assets": "*",
     "@endpapers/types": "*",
     "@endpapers/utils": "*",
+    "@huggingface/transformers": "^3.8.1",
     "@tailwindcss/vite": "^4.1.18",
     "@tiptap/extension-font-family": "^3.20.0",
     "@tiptap/extension-highlight": "^3.20.0",
