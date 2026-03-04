@@ -1,6 +1,7 @@
 import type { SectionInput, SummarizerProvider } from './types'
 import { sendWorkerRequest, getWorkerCapabilities } from './transformersWorkerClient'
 import { getWebGPUModel, getWasmModel } from './modelConfig'
+import { fitsInContext, chunkByParagraphs } from './textUtils'
 
 /** Map summary length option to token limits (WASM fallback path). */
 function lengthToTokens(length: string): { maxLength: number; minLength: number } {
@@ -74,35 +75,60 @@ export function createTransformersSummarizer(): SummarizerProvider {
     },
 
     async run(text, options, callbacks) {
-      // Single section — summarize directly
+      const caps = await getWorkerCapabilities()
+      const model = caps.device === 'webgpu' ? getWebGPUModel() : getWasmModel('summarize')
+      const maxTokens = model.maxInputTokens
+
+      // Single section — may need chunking if oversized
       if (typeof text === 'string') {
-        const { summary, cancel } = await summarizeOne(text, options, callbacks)
-        cancelFn = cancel
-        cancelFn = null
-        return summary
+        const chunks = fitsInContext(text, maxTokens)
+          ? [text]
+          : chunkByParagraphs(text, maxTokens)
+
+        if (chunks.length === 1) {
+          const { summary, cancel } = await summarizeOne(text, options, callbacks)
+          cancelFn = cancel
+          cancelFn = null
+          return summary
+        }
+
+        const results: string[] = []
+        for (let i = 0; i < chunks.length; i++) {
+          callbacks.onSectionProgress?.(i + 1, chunks.length, `Part ${i + 1}`)
+          const chunkCallbacks = i === 0 ? callbacks : { onRunning: callbacks.onRunning }
+          const { summary, cancel } = await summarizeOne(chunks[i], options, chunkCallbacks)
+          cancelFn = cancel
+          cancelFn = null
+          results.push(summary)
+        }
+        return results.join('\n\n')
       }
 
-      // Multiple sections — summarize each independently
+      // Multiple sections — summarize each, chunking oversized ones
       const sections = text as SectionInput[]
       const results: string[] = []
+      // Pre-compute total work units for progress
+      const work: Array<{ title: string; chunks: string[] }> = sections.map(s => ({
+        title: s.title,
+        chunks: fitsInContext(s.text, maxTokens) ? [s.text] : chunkByParagraphs(s.text, maxTokens),
+      }))
+      const totalUnits = work.reduce((n, w) => n + w.chunks.length, 0)
+      let completedUnits = 0
 
-      for (let i = 0; i < sections.length; i++) {
-        const section = sections[i]
-        callbacks.onSectionProgress?.(i + 1, sections.length, section.title)
+      for (const { title, chunks } of work) {
+        const sectionSummaries: string[] = []
+        for (let j = 0; j < chunks.length; j++) {
+          completedUnits++
+          const progressLabel = chunks.length > 1 ? `${title} (part ${j + 1}/${chunks.length})` : title
+          callbacks.onSectionProgress?.(completedUnits, totalUnits, progressLabel)
 
-        const sectionCallbacks = i === 0
-          ? callbacks
-          : { onRunning: callbacks.onRunning }
-
-        const { summary, cancel } = await summarizeOne(
-          section.text,
-          options,
-          sectionCallbacks,
-        )
-        cancelFn = cancel
-        cancelFn = null
-
-        results.push(`## ${section.title}\n\n${summary}`)
+          const chunkCallbacks = completedUnits === 1 ? callbacks : { onRunning: callbacks.onRunning }
+          const { summary, cancel } = await summarizeOne(chunks[j], options, chunkCallbacks)
+          cancelFn = cancel
+          cancelFn = null
+          sectionSummaries.push(summary)
+        }
+        results.push(`## ${title}\n\n${sectionSummaries.join('\n\n')}`)
       }
 
       return results.join('\n\n')

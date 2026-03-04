@@ -42,6 +42,61 @@ export function fitsInContext(text: string, maxTokens: number): boolean {
  * Score how relevant a section's text is to a question (keyword overlap).
  * Returns a value between 0 and 1.
  */
+/**
+ * Split text into chunks that fit within a token budget.
+ * Splits at paragraph boundaries (\n\n), grouping paragraphs greedily.
+ * If a single paragraph exceeds maxTokens, splits at sentence boundaries.
+ * Always returns at least one chunk.
+ */
+export function chunkByParagraphs(text: string, maxTokens: number): string[] {
+  if (fitsInContext(text, maxTokens)) return [text]
+
+  const paragraphs = text.split(/\n\n+/)
+  const chunks: string[] = []
+  let current = ''
+
+  for (const para of paragraphs) {
+    if (!para.trim()) continue
+
+    if (!fitsInContext(para, maxTokens)) {
+      // Paragraph itself is too large — split at sentence boundaries
+      if (current.trim()) {
+        chunks.push(current.trim())
+        current = ''
+      }
+      const sentences = splitSentences(para)
+      for (const sentence of sentences) {
+        const candidate = current ? current + ' ' + sentence : sentence
+        if (current && !fitsInContext(candidate, maxTokens)) {
+          chunks.push(current.trim())
+          current = sentence
+        } else {
+          current = candidate
+        }
+      }
+      continue
+    }
+
+    const candidate = current ? current + '\n\n' + para : para
+    if (current && !fitsInContext(candidate, maxTokens)) {
+      chunks.push(current.trim())
+      current = para
+    } else {
+      current = candidate
+    }
+  }
+
+  if (current.trim()) chunks.push(current.trim())
+  return chunks.length > 0 ? chunks : [text]
+}
+
+/** Split text at sentence boundaries. */
+function splitSentences(text: string): string[] {
+  // Split on period/exclamation/question mark followed by space and uppercase letter, or end of string
+  const parts = text.split(/(?<=[.!?])\s+(?=[A-Z])/)
+  return parts.filter(s => s.trim())
+}
+
 export function relevanceScore(text: string, question: string): number {
   const questionKeywords = extractKeywords(question)
   if (questionKeywords.length === 0) return 0

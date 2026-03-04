@@ -11,7 +11,7 @@ import { FontFamily } from '@tiptap/extension-font-family'
 import { FontSize } from './fontSizeExtension'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { SectionManifestEntry, ProjectSettings } from '@endpapers/types'
-import { countWords, findSectionTitle } from '@endpapers/utils'
+import { countWords, estimatePages, findSectionTitle } from '@endpapers/utils'
 import { useProject } from '../../contexts/ProjectContext'
 import { useToast } from '../../contexts/ToastContext'
 import { readSectionFile, writeSectionFile } from '../../fs/projectFs'
@@ -334,12 +334,17 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
       </div>
       {!focusMode && activeSectionId && !loading && (() => {
         const sectionWords = sectionWordCounts[activeSectionId] ?? 0
+        const wpp = settings.wordsPerPage
+        const sectionPages = estimatePages(sectionWords, wpp)
+        const totalPages = estimatePages(totalWords, wpp)
         const readMin = Math.max(1, Math.ceil(totalWords / 200))
         return (
           <div className="shrink-0 border-t border-border h-8 flex items-center px-4 gap-4 text-[0.75rem] text-text-secondary bg-surface">
             <span><strong className="font-medium text-text-secondary">{sectionWords.toLocaleString()}</strong> words</span>
+            <span><strong className="font-medium text-text-secondary">~{sectionPages}</strong> {sectionPages === 1 ? 'pg' : 'pgs'}</span>
             <div className="w-px h-3.5 bg-border" />
             <span><strong className="font-medium text-text-secondary">{totalWords.toLocaleString()}</strong> total</span>
+            <span><strong className="font-medium text-text-secondary">~{totalPages}</strong> {totalPages === 1 ? 'pg' : 'pgs'}</span>
             <div className="w-px h-3.5 bg-border" />
             <span className="flex items-center gap-1">
               <IconClock size={11} />

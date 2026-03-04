@@ -1,5 +1,5 @@
 import { Extension } from '@tiptap/core'
-import { Plugin, PluginKey } from '@tiptap/pm/state'
+import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 
@@ -58,21 +58,39 @@ export const SearchReplace = Extension.create({
   addCommands() {
     return {
       setSearchTerm: (term: string) => ({ tr, dispatch }) => {
-        if (dispatch) dispatch(tr.setMeta(searchKey, { type: 'setTerm', term }))
+        if (dispatch) {
+          tr.setMeta(searchKey, { type: 'setTerm', term })
+          const results = findAll(tr.doc, term)
+          if (results.length > 0) {
+            const { from, to } = results[0]
+            tr.setSelection(TextSelection.create(tr.doc, from, to)).scrollIntoView()
+          }
+          dispatch(tr)
+        }
         return true
       },
       nextSearchResult: () => ({ tr, dispatch, editor }) => {
         const state = searchKey.getState(editor.state)
         if (!state?.results.length) return false
         const next = (state.currentIndex + 1) % state.results.length
-        if (dispatch) dispatch(tr.setMeta(searchKey, { type: 'setIndex', index: next }))
+        if (dispatch) {
+          tr.setMeta(searchKey, { type: 'setIndex', index: next })
+          const { from, to } = state.results[next]
+          tr.setSelection(TextSelection.create(tr.doc, from, to)).scrollIntoView()
+          dispatch(tr)
+        }
         return true
       },
       previousSearchResult: () => ({ tr, dispatch, editor }) => {
         const state = searchKey.getState(editor.state)
         if (!state?.results.length) return false
         const prev = (state.currentIndex - 1 + state.results.length) % state.results.length
-        if (dispatch) dispatch(tr.setMeta(searchKey, { type: 'setIndex', index: prev }))
+        if (dispatch) {
+          tr.setMeta(searchKey, { type: 'setIndex', index: prev })
+          const { from, to } = state.results[prev]
+          tr.setSelection(TextSelection.create(tr.doc, from, to)).scrollIntoView()
+          dispatch(tr)
+        }
         return true
       },
       replaceCurrentSearchResult: (replacement: string) => ({ tr, dispatch, editor }) => {

@@ -1,4 +1,8 @@
 import type { SectionInput, SummarizerProvider } from './types'
+import { fitsInContext, chunkByParagraphs } from './textUtils'
+
+/** Conservative token limit for Chrome Summarizer (context size not exposed). */
+const CHROME_SUMMARIZER_MAX_TOKENS = 4000
 
 export function createChromeSummarizer(): SummarizerProvider {
   let cancelled = false
@@ -51,11 +55,32 @@ export function createChromeSummarizer(): SummarizerProvider {
       instance = created
       onRunning?.()
 
+      /** Summarize a single chunk of text. */
+      async function summarizeChunk(chunk: string, context: string): Promise<string> {
+        if (cancelled) {
+          created.destroy()
+          instance = null
+          throw new DOMException('Cancelled', 'AbortError')
+        }
+        return created.summarize(chunk, { context })
+      }
+
+      /** Summarize a text that may need chunking. */
+      async function summarizeText(fullText: string, context: string): Promise<string> {
+        const chunks = fitsInContext(fullText, CHROME_SUMMARIZER_MAX_TOKENS)
+          ? [fullText]
+          : chunkByParagraphs(fullText, CHROME_SUMMARIZER_MAX_TOKENS)
+
+        const summaries: string[] = []
+        for (const chunk of chunks) {
+          summaries.push(await summarizeChunk(chunk, context))
+        }
+        return summaries.join('\n\n')
+      }
+
       // Single section
       if (typeof text === 'string') {
-        const result = await created.summarize(text, {
-          context: 'This is a section from a creative writing project.',
-        })
+        const result = await summarizeText(text, 'This is a section from a creative writing project.')
         created.destroy()
         instance = null
 
@@ -63,24 +88,31 @@ export function createChromeSummarizer(): SummarizerProvider {
         return result
       }
 
-      // Multiple sections — summarize each independently
+      // Multiple sections — summarize each, chunking oversized ones
       const sections = text as SectionInput[]
+      const work = sections.map(s => ({
+        title: s.title,
+        chunks: fitsInContext(s.text, CHROME_SUMMARIZER_MAX_TOKENS)
+          ? [s.text]
+          : chunkByParagraphs(s.text, CHROME_SUMMARIZER_MAX_TOKENS),
+      }))
+      const totalUnits = work.reduce((n, w) => n + w.chunks.length, 0)
+      let completedUnits = 0
       const results: string[] = []
 
-      for (let i = 0; i < sections.length; i++) {
-        const section = sections[i]
-        onSectionProgress?.(i + 1, sections.length, section.title)
+      for (const { title, chunks } of work) {
+        const sectionSummaries: string[] = []
+        for (let j = 0; j < chunks.length; j++) {
+          completedUnits++
+          const label = chunks.length > 1 ? `${title} (part ${j + 1}/${chunks.length})` : title
+          onSectionProgress?.(completedUnits, totalUnits, label)
 
-        if (cancelled) {
-          created.destroy()
-          instance = null
-          throw new DOMException('Cancelled', 'AbortError')
+          sectionSummaries.push(await summarizeChunk(
+            chunks[j],
+            `This is a section titled "${title}" from a creative writing project.`,
+          ))
         }
-
-        const result = await created.summarize(section.text, {
-          context: `This is a section titled "${section.title}" from a creative writing project.`,
-        })
-        results.push(`## ${section.title}\n\n${result}`)
+        results.push(`## ${title}\n\n${sectionSummaries.join('\n\n')}`)
       }
 
       created.destroy()

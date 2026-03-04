@@ -1,4 +1,8 @@
 import type { QAProvider } from './types'
+import { fitsInContext, chunkByParagraphs, relevanceScore } from './textUtils'
+
+/** Conservative token limit for Chrome Prompt API (context size not exposed). */
+const CHROME_QA_MAX_TOKENS = 4000
 
 export function createChromeQA(): QAProvider {
   let cancelled = false
@@ -41,8 +45,24 @@ export function createChromeQA(): QAProvider {
       instance = created
       onRunning?.()
 
+      // If text exceeds context, pick the most relevant chunk
+      let inputText = text
+      if (!fitsInContext(text, CHROME_QA_MAX_TOKENS)) {
+        const chunks = chunkByParagraphs(text, CHROME_QA_MAX_TOKENS)
+        let bestIdx = 0
+        let bestScore = -1
+        for (let i = 0; i < chunks.length; i++) {
+          const score = relevanceScore(chunks[i], options.question)
+          if (score > bestScore) {
+            bestScore = score
+            bestIdx = i
+          }
+        }
+        inputText = chunks[bestIdx]
+      }
+
       const result = await created.prompt(
-        `Context:\n${text}\n\nQuestion: ${options.question}`,
+        `Context:\n${inputText}\n\nQuestion: ${options.question}`,
       )
       created.destroy()
       instance = null
