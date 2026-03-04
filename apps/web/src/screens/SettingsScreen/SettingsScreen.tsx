@@ -8,7 +8,7 @@ import { IconArrowLeft } from '../../components/icons'
 import ImportDialog from '../../components/ImportDialog/ImportDialog'
 import ExportDialog from '../../components/ExportDialog/ExportDialog'
 import { getCachedModels, deleteModel, deleteAllModels, type CachedModelInfo } from '../../ai/modelCache'
-import { terminateWorker } from '../../ai/transformersWorkerClient'
+import { terminateWorker, getWorkerCapabilities } from '../../ai/transformersWorkerClient'
 
 export default function SettingsScreen() {
   const navigate = useNavigate()
@@ -17,6 +17,7 @@ export default function SettingsScreen() {
   const [exportOpen, setExportOpen] = useState(false)
   const [cachedModels, setCachedModels] = useState<CachedModelInfo[]>([])
   const [modelsLoading, setModelsLoading] = useState(true)
+  const [gpuStatus, setGpuStatus] = useState<'checking' | 'webgpu' | 'wasm'>('checking')
 
   useEffect(() => {
     if (!project) navigate('/', { replace: true })
@@ -26,6 +27,12 @@ export default function SettingsScreen() {
   useEffect(() => {
     loadCachedModels()
   }, [])
+
+  // Check WebGPU capability (lightweight — only when AI is enabled)
+  useEffect(() => {
+    if (!(project?.settings?.aiEnabled)) return
+    getWorkerCapabilities().then(caps => setGpuStatus(caps.device)).catch(() => setGpuStatus('wasm'))
+  }, [project?.settings?.aiEnabled])
 
   async function loadCachedModels() {
     setModelsLoading(true)
@@ -204,17 +211,31 @@ export default function SettingsScreen() {
                 onChange={v => handleUpdate({ aiEnabled: v })}
               />
               {(settings.aiEnabled ?? false) && (
-                <SettingSelectRow
-                  label="AI backend"
-                  description="Choose which on-device AI engine to use."
-                  value={settings.aiBackend ?? 'auto'}
-                  options={[
-                    { label: 'Auto (Chrome AI if available)', value: 'auto' },
-                    { label: 'Chrome Built-in AI', value: 'chrome' },
-                    { label: 'Open Source sLLM (any browser)', value: 'transformers' },
-                  ]}
-                  onChange={v => handleUpdate({ aiBackend: v as AIBackend })}
-                />
+                <>
+                  <SettingSelectRow
+                    label="AI backend"
+                    description="Choose which on-device AI engine to use."
+                    value={settings.aiBackend ?? 'auto'}
+                    options={[
+                      { label: 'Auto (Chrome AI if available)', value: 'auto' },
+                      { label: 'Chrome Built-in AI', value: 'chrome' },
+                      { label: 'Open Source sLLM (GPU-accelerated)', value: 'transformers' },
+                    ]}
+                    onChange={v => handleUpdate({ aiBackend: v as AIBackend })}
+                  />
+                  {(settings.aiBackend ?? 'auto') !== 'chrome' && (
+                    <div className="px-4 py-3 bg-surface">
+                      <div className="text-[0.9375rem] text-text">Inference engine</div>
+                      <div className="text-[0.8125rem] text-text-secondary mt-0.5">
+                        {gpuStatus === 'checking'
+                          ? 'Checking GPU availability…'
+                          : gpuStatus === 'webgpu'
+                            ? <><span className="text-accent">GPU-accelerated</span> · Using WebGPU for fast on-device inference</>
+                            : <>CPU (WASM) · WebGPU not available in this browser</>}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </section>
