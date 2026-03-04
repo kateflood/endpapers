@@ -29,6 +29,24 @@ export interface ProofreaderProvider {
   cancel(): void
 }
 
+// --- Q&A ---
+
+export interface QAProvider {
+  readonly id: string
+  readonly label: string
+  readonly description: string
+  checkAvailability(): Promise<ProviderAvailability>
+  run(
+    text: string,
+    options: { question: string },
+    callbacks: {
+      onDownloadProgress?: (progress: number) => void
+      onRunning?: () => void
+    },
+  ): Promise<string>
+  cancel(): void
+}
+
 // --- Summarizer ---
 
 export interface SummarizerProvider {

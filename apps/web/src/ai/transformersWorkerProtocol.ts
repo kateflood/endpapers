@@ -8,6 +8,7 @@ export type WorkerRequest =
       maxLength: number; minLength: number
       summaryType?: string; summaryLength?: string
     } }
+  | { type: 'qa'; id: number; text: string; question: string }
   | { type: 'cancel'; id: number }
 
 // Worker → main thread
@@ -17,4 +18,5 @@ export type WorkerResponse =
   | { type: 'running'; id: number }
   | { type: 'proofread-result'; id: number; correctedText: string }
   | { type: 'summarize-result'; id: number; summary: string }
+  | { type: 'qa-result'; id: number; answer: string }
   | { type: 'error'; id: number; message: string }

@@ -4,8 +4,9 @@ import { IconSparkles, IconClose } from '../icons'
 import { actionBtnClass, CenteredState } from './shared'
 import ProofreaderTab from './ProofreaderTab'
 import SummarizerTab from './SummarizerTab'
+import QATab from './QATab'
 
-type AITab = 'proofread' | 'summarize'
+type AITab = 'proofread' | 'summarize' | 'qa'
 
 interface AIPanelProps {
   getEditorText: () => string
@@ -36,20 +37,7 @@ export default function AIPanel({
       <div className="flex items-center px-4 h-12 border-b border-border shrink-0 gap-2">
         <IconSparkles size={14} className="text-accent shrink-0" />
         <span className="text-[0.9375rem] font-medium text-text">AI Tools</span>
-        {/* Tabs */}
-        {aiEnabled && (
-          <div className="flex items-center gap-1 ml-auto mr-1">
-            <button className={tabClass('proofread')} onClick={() => setActiveTab('proofread')}>
-              Proofread
-            </button>
-            <button className={tabClass('summarize')} onClick={() => setActiveTab('summarize')}>
-              Summarize
-            </button>
-          </div>
-        )}
-
-        {!aiEnabled && <div className="flex-1" />}
-
+        <div className="flex-1" />
         <button
           className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer shrink-0"
           onClick={onClose}
@@ -58,6 +46,21 @@ export default function AIPanel({
           <IconClose size={14} />
         </button>
       </div>
+
+      {/* Tab bar */}
+      {aiEnabled && (
+        <div className="flex items-center gap-1 px-4 py-1.5 border-b border-border shrink-0 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <button className={tabClass('proofread')} onClick={() => setActiveTab('proofread')}>
+            Proofread
+          </button>
+          <button className={tabClass('summarize')} onClick={() => setActiveTab('summarize')}>
+            Summarize
+          </button>
+          <button className={tabClass('qa')} onClick={() => setActiveTab('qa')}>
+            Q&A
+          </button>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto flex flex-col">
@@ -79,8 +82,10 @@ export default function AIPanel({
             clearHighlight={clearHighlight}
             backend={aiBackend}
           />
-        ) : (
+        ) : activeTab === 'summarize' ? (
           <SummarizerTab getEditorText={getEditorText} backend={aiBackend} />
+        ) : (
+          <QATab getEditorText={getEditorText} backend={aiBackend} />
         )}
       </div>
     </aside>

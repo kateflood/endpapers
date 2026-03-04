@@ -74,3 +74,24 @@ interface ProofreaderConstructor {
 }
 
 declare const Proofreader: ProofreaderConstructor
+
+// -- Prompt API / LanguageModel (Chrome 138+) --
+
+interface LanguageModelCreateOptions {
+  systemPrompt?: string
+  expectedInputLanguages?: string[]
+  monitor?: (monitor: AICreateMonitor) => void
+}
+
+interface LanguageModelInstance {
+  prompt(input: string): Promise<string>
+  promptStreaming(input: string): ReadableStream<string>
+  destroy(): void
+}
+
+interface LanguageModelConstructor {
+  availability(): Promise<AIAvailability>
+  create(options?: LanguageModelCreateOptions): Promise<LanguageModelInstance>
+}
+
+declare const LanguageModel: LanguageModelConstructor

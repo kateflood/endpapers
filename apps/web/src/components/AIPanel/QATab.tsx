@@ -4,8 +4,8 @@ import { useToast } from '../../contexts/ToastContext'
 import { useProject } from '../../contexts/ProjectContext'
 import { readAllSectionsAsText } from '../../fs/projectFs'
 import { IconSparkles, IconDownload, IconLoader } from '../icons'
-import type { ProviderAvailability, SummarizerProvider } from '../../ai/types'
-import { getSummarizerProviders } from '../../ai/providers'
+import type { ProviderAvailability, QAProvider } from '../../ai/types'
+import { getQAProviders } from '../../ai/providers'
 import { terminateWorker } from '../../ai/transformersWorkerClient'
 import {
   type ToolState,
@@ -13,37 +13,32 @@ import {
   DownloadProgressBar, CenteredState, AvailabilityBadge,
 } from './shared'
 
-type SummaryScope = 'section' | 'draft'
+type QAScope = 'section' | 'draft'
 
-interface SummarizerTabProps {
+interface QATabProps {
   getEditorText: () => string
   backend: AIBackend
 }
 
-export default function SummarizerTab({ getEditorText, backend }: SummarizerTabProps) {
+export default function QATab({ getEditorText, backend }: QATabProps) {
   const { showToast } = useToast()
   const { project, handle } = useProject()
 
-  // Provider (resolved via availability check)
-  const [provider, setProvider] = useState<SummarizerProvider | null>(null)
-
-  // Availability
+  const [provider, setProvider] = useState<QAProvider | null>(null)
   const [availability, setAvailability] = useState<ProviderAvailability | 'checking'>('checking')
-
-  // Tool state
   const [toolState, setToolState] = useState<ToolState>('idle')
   const [progress, setProgress] = useState<number | null>(null)
-  const [summaryResult, setSummaryResult] = useState('')
-  const [summaryType, setSummaryType] = useState<SummarizerType>('tldr')
-  const [summaryLength, setSummaryLength] = useState<SummarizerLength>('medium')
-  const [scope, setScope] = useState<SummaryScope>('section')
-  const activeProviderRef = useRef<SummarizerProvider | null>(null)
+  const [answer, setAnswer] = useState('')
+  const [question, setQuestion] = useState('')
+  const [askedQuestion, setAskedQuestion] = useState('')
+  const [scope, setScope] = useState<QAScope>('section')
+  const activeProviderRef = useRef<QAProvider | null>(null)
 
   // Resolve best available provider on mount / backend change
   useEffect(() => {
     let cancelled = false
     async function resolve() {
-      const providers = getSummarizerProviders(backend)
+      const providers = getQAProviders(backend)
       for (const p of providers) {
         const avail = await p.checkAvailability()
         if (cancelled) return
@@ -63,9 +58,12 @@ export default function SummarizerTab({ getEditorText, backend }: SummarizerTabP
     return () => { cancelled = true }
   }, [backend])
 
-  // ── Handlers ──────────────────────────────────────────────────
-
   async function handleRun() {
+    if (!question.trim()) {
+      showToast('Type a question first.', 'info')
+      return
+    }
+
     let text: string
     if (scope === 'draft' && handle && project) {
       text = await readAllSectionsAsText(handle, project.sections)
@@ -73,23 +71,24 @@ export default function SummarizerTab({ getEditorText, backend }: SummarizerTabP
       text = getEditorText()
     }
     if (!text.trim()) {
-      showToast('No text to summarize. Write something first.', 'info')
+      showToast('No text to search. Write something first.', 'info')
       return
     }
     if (!provider) return
+
     setToolState('downloading')
     setProgress(null)
-    setSummaryResult('')
+    setAnswer('')
+    setAskedQuestion(question)
 
-    // Create a fresh provider instance for this run
-    const providers = getSummarizerProviders(backend)
+    const providers = getQAProviders(backend)
     const runProvider = providers.find(p => p.id === provider.id) ?? providers[0]
     activeProviderRef.current = runProvider
 
     try {
       const result = await runProvider.run(
         text,
-        { type: summaryType, length: summaryLength },
+        { question },
         {
           onDownloadProgress(p) { setProgress(p) },
           onRunning() { setToolState('running'); setProgress(null) },
@@ -97,13 +96,13 @@ export default function SummarizerTab({ getEditorText, backend }: SummarizerTabP
       )
 
       activeProviderRef.current = null
-      setSummaryResult(result)
+      setAnswer(result)
       setToolState('results')
     } catch (err) {
       activeProviderRef.current = null
       if (err instanceof DOMException && err.name === 'AbortError') return
-      showToast('Summarization failed. The model may not be available.', 'error')
-      console.error('Summarizer error:', err)
+      showToast('Q&A failed. The model may not be available.', 'error')
+      console.error('Q&A error:', err)
       setToolState('idle')
     }
   }
@@ -121,18 +120,14 @@ export default function SummarizerTab({ getEditorText, backend }: SummarizerTabP
     setProgress(null)
   }
 
-  // ── Derived ───────────────────────────────────────────────────
-
   const selectClass = 'h-7 px-1.5 rounded-sm text-[0.8125rem] text-text bg-bg border border-border outline-none cursor-pointer'
-
-  // ── Render ────────────────────────────────────────────────────
 
   if (availability === 'unavailable') {
     return (
       <CenteredState
         icon={<IconSparkles size={24} className="text-text-placeholder" />}
-        title="Summarizer not available"
-        subtitle="This feature requires Chrome 138+ with on-device AI enabled."
+        title="Q&A not available"
+        subtitle="This feature requires a WebGPU-capable browser or Chrome with the Prompt API enabled."
       />
     )
   }
@@ -141,50 +136,43 @@ export default function SummarizerTab({ getEditorText, backend }: SummarizerTabP
     return (
       <CenteredState
         icon={<IconSparkles size={24} className="text-accent" />}
-        title="Summarize with AI"
-        subtitle="Get key points, a TL;DR, or a teaser using a private on-device model."
+        title="Ask about your text"
+        subtitle="Ask a question and get an answer based only on your writing."
       >
         <div className="w-full rounded-md border border-border bg-surface p-3 text-left space-y-2">
           <p className="text-[0.75rem] font-medium text-text-secondary">Model</p>
           <p className="text-[0.8125rem] text-text font-medium">{provider?.label}</p>
           <p className="text-[0.75rem] text-text-placeholder">{provider?.description}</p>
         </div>
-        <div className="flex items-center gap-2 w-full flex-wrap">
+        <textarea
+          className="w-full h-20 px-3 py-2 rounded-sm text-[0.8125rem] text-text bg-bg border border-border outline-none resize-none placeholder:text-text-placeholder"
+          placeholder="Type your question…"
+          value={question}
+          onChange={e => setQuestion(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              handleRun()
+            }
+          }}
+        />
+        <div className="flex items-center gap-2 w-full">
           <select
             className={selectClass}
             value={scope}
-            onChange={e => setScope(e.target.value as SummaryScope)}
+            onChange={e => setScope(e.target.value as QAScope)}
           >
             <option value="section">Current Section</option>
             <option value="draft">Entire Draft</option>
-          </select>
-          <select
-            className={selectClass}
-            value={summaryType}
-            onChange={e => setSummaryType(e.target.value as SummarizerType)}
-          >
-            <option value="tldr">Summary</option>
-            <option value="key-points">Key Points</option>
-            <option value="teaser">Teaser</option>
-            <option value="headline">Headline</option>
-          </select>
-          <select
-            className={selectClass}
-            value={summaryLength}
-            onChange={e => setSummaryLength(e.target.value as SummarizerLength)}
-          >
-            <option value="short">Short</option>
-            <option value="medium">Medium</option>
-            <option value="long">Long</option>
           </select>
         </div>
         <AvailabilityBadge availability={availability} />
         <button
           className={actionBtnClass}
           onClick={handleRun}
-          disabled={availability === 'checking'}
+          disabled={availability === 'checking' || !question.trim()}
         >
-          Run Summary
+          Ask
         </button>
         <p className="text-[0.75rem] text-text-placeholder">Your text never leaves your device.</p>
       </CenteredState>
@@ -209,7 +197,7 @@ export default function SummarizerTab({ getEditorText, backend }: SummarizerTabP
     return (
       <CenteredState
         icon={<IconLoader size={24} className="text-accent animate-spin" />}
-        title="Summarizing…"
+        title="Thinking…"
         subtitle="Running on-device. This may take a moment."
       >
         <button className={cancelBtnClass} onClick={handleCancel}>Cancel</button>
@@ -221,47 +209,20 @@ export default function SummarizerTab({ getEditorText, backend }: SummarizerTabP
   return (
     <div className="flex flex-col h-full">
       <div className="px-4 py-3 border-b border-border shrink-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <select
-            className={selectClass}
-            value={scope}
-            onChange={e => setScope(e.target.value as SummaryScope)}
-          >
-            <option value="section">Current Section</option>
-            <option value="draft">Entire Draft</option>
-          </select>
-          <select
-            className={selectClass}
-            value={summaryType}
-            onChange={e => setSummaryType(e.target.value as SummarizerType)}
-          >
-            <option value="key-points">Key Points</option>
-            <option value="tldr">TL;DR</option>
-            <option value="teaser">Teaser</option>
-            <option value="headline">Headline</option>
-          </select>
-          <select
-            className={selectClass}
-            value={summaryLength}
-            onChange={e => setSummaryLength(e.target.value as SummarizerLength)}
-          >
-            <option value="short">Short</option>
-            <option value="medium">Medium</option>
-            <option value="long">Long</option>
-          </select>
-        </div>
+        <p className="text-[0.75rem] text-text-secondary mb-1">Question</p>
+        <p className="text-[0.8125rem] text-text">{askedQuestion}</p>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="p-3 bg-bg rounded-sm text-[0.8125rem] text-text leading-relaxed whitespace-pre-wrap">
-          {summaryResult}
+          {answer}
         </div>
       </div>
       <div className="px-4 py-3 border-t border-border shrink-0">
         <button
           className="w-full h-8 rounded-sm text-[0.8125rem] font-medium text-accent bg-accent/10 hover:bg-accent/15 transition-colors cursor-pointer"
-          onClick={() => { setToolState('idle'); setSummaryResult('') }}
+          onClick={() => { setToolState('idle'); setAnswer(''); setQuestion('') }}
         >
-          Run Again
+          Ask Another
         </button>
       </div>
     </div>

@@ -36,6 +36,27 @@ function progressCallback(id: number) {
   }
 }
 
+/** Strip Qwen3 <think>...</think> reasoning blocks from generated text. */
+function stripThinkingTokens(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+}
+
+/**
+ * Extract the generated text from a WebGPU chat-style pipeline result.
+ * Handles both string and message-array formats, strips thinking tokens.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractGeneratedText(result: any): string {
+  const output = Array.isArray(result) ? result[0] : result
+  const generated = output.generated_text
+  const raw = typeof generated === 'string'
+    ? generated
+    : Array.isArray(generated)
+      ? generated[generated.length - 1]?.content ?? ''
+      : String(generated)
+  return stripThinkingTokens(raw)
+}
+
 async function detectWebGPU(): Promise<boolean> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -113,6 +134,16 @@ function buildSummarizeMessages(text: string, summaryType?: string, summaryLengt
   ]
 }
 
+function buildQAMessages(text: string, question: string) {
+  return [
+    {
+      role: 'system',
+      content: 'You are a helpful assistant. Answer the user\'s question using ONLY the provided text as context. If the answer cannot be found in the text, say so. Be concise and direct.',
+    },
+    { role: 'user', content: `Context:\n${text}\n\nQuestion: ${question}` },
+  ]
+}
+
 // ── Handlers ─────────────────────────────────────────────────────────────
 
 async function handleInit(id: number) {
@@ -136,22 +167,13 @@ async function handleProofread(id: number, text: string) {
 
       const messages = buildProofreadMessages(text)
       const result = await pipe(messages, {
-        max_new_tokens: Math.max(64, Math.ceil(text.length * 1.2)),
+        max_new_tokens: Math.max(128, Math.ceil(text.length * 1.5)),
         return_full_text: false,
       })
 
       if (cancelledIds.has(id)) { cancelledIds.delete(id); return }
 
-      // Extract generated text — for chat input, may be a messages array or string
-      const output = Array.isArray(result) ? result[0] : result
-      const generated = output.generated_text
-      const correctedText = typeof generated === 'string'
-        ? generated
-        : Array.isArray(generated)
-          ? generated[generated.length - 1]?.content ?? ''
-          : String(generated)
-
-      send({ type: 'proofread-result', id, correctedText: correctedText.trim() })
+      send({ type: 'proofread-result', id, correctedText: extractGeneratedText(result) })
     } else {
       // WASM fallback path
       const pipe = await getWasmProofreadPipeline(id)
@@ -190,9 +212,9 @@ async function handleSummarize(
 
       send({ type: 'running', id })
 
-      const tokenLimit = options.summaryLength === 'short' ? 100
-        : options.summaryLength === 'long' ? 500
-        : 250
+      const tokenLimit = options.summaryLength === 'short' ? 256
+        : options.summaryLength === 'long' ? 1024
+        : 512
 
       const messages = buildSummarizeMessages(text, options.summaryType, options.summaryLength)
       const result = await pipe(messages, {
@@ -202,15 +224,7 @@ async function handleSummarize(
 
       if (cancelledIds.has(id)) { cancelledIds.delete(id); return }
 
-      const output = Array.isArray(result) ? result[0] : result
-      const generated = output.generated_text
-      const summary = typeof generated === 'string'
-        ? generated
-        : Array.isArray(generated)
-          ? generated[generated.length - 1]?.content ?? ''
-          : String(generated)
-
-      send({ type: 'summarize-result', id, summary: summary.trim() })
+      send({ type: 'summarize-result', id, summary: extractGeneratedText(result) })
     } else {
       // WASM fallback path
       const pipe = await getWasmSummarizePipeline(id)
@@ -239,6 +253,35 @@ async function handleSummarize(
   }
 }
 
+async function handleQA(id: number, text: string, question: string) {
+  try {
+    if (deviceMode !== 'webgpu') {
+      send({ type: 'error', id, message: 'Q&A requires WebGPU. Your browser does not support it.' })
+      return
+    }
+
+    const pipe = await getWebGPUPipeline(id)
+    if (cancelledIds.has(id)) { cancelledIds.delete(id); return }
+
+    send({ type: 'running', id })
+
+    const messages = buildQAMessages(text, question)
+    const result = await pipe(messages, {
+      max_new_tokens: 512,
+      return_full_text: false,
+    })
+
+    if (cancelledIds.has(id)) { cancelledIds.delete(id); return }
+
+    send({ type: 'qa-result', id, answer: extractGeneratedText(result) })
+  } catch (err) {
+    if (!cancelledIds.has(id)) {
+      send({ type: 'error', id, message: err instanceof Error ? err.message : String(err) })
+    }
+    cancelledIds.delete(id)
+  }
+}
+
 // ── Message router ───────────────────────────────────────────────────────
 
 self.onmessage = (e: MessageEvent<WorkerRequest>) => {
@@ -257,5 +300,9 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
   }
   if (msg.type === 'summarize') {
     handleSummarize(msg.id, msg.text, msg.options)
+    return
+  }
+  if (msg.type === 'qa') {
+    handleQA(msg.id, msg.text, msg.question)
   }
 }

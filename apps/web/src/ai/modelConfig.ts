@@ -4,7 +4,7 @@
 
 export type PipelineType = 'text-generation' | 'text2text-generation' | 'summarization'
 export type ModelDevice = 'webgpu' | 'wasm'
-export type ModelCapability = 'proofread' | 'summarize'
+export type ModelCapability = 'proofread' | 'summarize' | 'qa'
 
 export interface ModelConfig {
   readonly id: string
@@ -32,7 +32,7 @@ const MODELS = {
     approxSize: '~400 MB',
     pipelineType: 'text-generation',
     device: 'webgpu',
-    capabilities: ['proofread', 'summarize'],
+    capabilities: ['proofread', 'summarize', 'qa'],
   },
   'flan-t5-base': {
     id: 'flan-t5-base',
