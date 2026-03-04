@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { AIBackend } from '@endpapers/types'
 import { useToast } from '../../contexts/ToastContext'
 import { useProject } from '../../contexts/ProjectContext'
-import { readAllSectionsAsText } from '../../fs/projectFs'
+import { readSectionsIndividually } from '../../fs/projectFs'
 import { IconSparkles, IconDownload, IconLoader } from '../icons'
 import type { ProviderAvailability, SummarizerProvider } from '../../ai/types'
 import { getSummarizerProviders } from '../../ai/providers'
@@ -37,6 +37,7 @@ export default function SummarizerTab({ getEditorText, backend }: SummarizerTabP
   const [summaryType, setSummaryType] = useState<SummarizerType>('tldr')
   const [summaryLength, setSummaryLength] = useState<SummarizerLength>('medium')
   const [scope, setScope] = useState<SummaryScope>('section')
+  const [sectionProgress, setSectionProgress] = useState<{ current: number; total: number; title: string } | null>(null)
   const activeProviderRef = useRef<SummarizerProvider | null>(null)
 
   // Resolve best available provider on mount / backend change
@@ -66,20 +67,27 @@ export default function SummarizerTab({ getEditorText, backend }: SummarizerTabP
   // ── Handlers ──────────────────────────────────────────────────
 
   async function handleRun() {
-    let text: string
+    let input: string | Array<{ title: string; text: string }>
     if (scope === 'draft' && handle && project) {
-      text = await readAllSectionsAsText(handle, project.sections)
+      const sections = await readSectionsIndividually(handle, project.sections)
+      if (sections.length === 0) {
+        showToast('No text to summarize. Write something first.', 'info')
+        return
+      }
+      input = sections
     } else {
-      text = getEditorText()
-    }
-    if (!text.trim()) {
-      showToast('No text to summarize. Write something first.', 'info')
-      return
+      const text = getEditorText()
+      if (!text.trim()) {
+        showToast('No text to summarize. Write something first.', 'info')
+        return
+      }
+      input = text
     }
     if (!provider) return
     setToolState('downloading')
     setProgress(null)
     setSummaryResult('')
+    setSectionProgress(null)
 
     // Create a fresh provider instance for this run
     const providers = getSummarizerProviders(backend)
@@ -88,11 +96,12 @@ export default function SummarizerTab({ getEditorText, backend }: SummarizerTabP
 
     try {
       const result = await runProvider.run(
-        text,
+        input,
         { type: summaryType, length: summaryLength },
         {
           onDownloadProgress(p) { setProgress(p) },
           onRunning() { setToolState('running'); setProgress(null) },
+          onSectionProgress(current, total, title) { setSectionProgress({ current, total, title }) },
         },
       )
 
@@ -142,7 +151,7 @@ export default function SummarizerTab({ getEditorText, backend }: SummarizerTabP
       <CenteredState
         icon={<IconSparkles size={24} className="text-accent" />}
         title="Summarize with AI"
-        subtitle="Get key points, a TL;DR, or a teaser using a private on-device model."
+        subtitle="Get key points, a summary or a teaser using a private on-device model."
       >
         <div className="w-full rounded-md border border-border bg-surface p-3 text-left space-y-2">
           <p className="text-[0.75rem] font-medium text-text-secondary">Model</p>
@@ -209,9 +218,21 @@ export default function SummarizerTab({ getEditorText, backend }: SummarizerTabP
     return (
       <CenteredState
         icon={<IconLoader size={24} className="text-accent animate-spin" />}
-        title="Summarizing…"
-        subtitle="Running on-device. This may take a moment."
+        title={sectionProgress
+          ? `Summarizing section ${sectionProgress.current} of ${sectionProgress.total}…`
+          : 'Summarizing…'}
+        subtitle={sectionProgress
+          ? sectionProgress.title
+          : 'Running on-device. This may take a moment.'}
       >
+        {sectionProgress && (
+          <div className="w-full bg-border rounded-full h-1.5">
+            <div
+              className="bg-accent h-1.5 rounded-full transition-all duration-300"
+              style={{ width: `${(sectionProgress.current / sectionProgress.total) * 100}%` }}
+            />
+          </div>
+        )}
         <button className={cancelBtnClass} onClick={handleCancel}>Cancel</button>
       </CenteredState>
     )
@@ -235,8 +256,8 @@ export default function SummarizerTab({ getEditorText, backend }: SummarizerTabP
             value={summaryType}
             onChange={e => setSummaryType(e.target.value as SummarizerType)}
           >
+            <option value="tldr">Summary</option>
             <option value="key-points">Key Points</option>
-            <option value="tldr">TL;DR</option>
             <option value="teaser">Teaser</option>
             <option value="headline">Headline</option>
           </select>

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { AIBackend } from '@endpapers/types'
 import { useToast } from '../../contexts/ToastContext'
 import { useProject } from '../../contexts/ProjectContext'
-import { readAllSectionsAsText } from '../../fs/projectFs'
+import { readSectionsIndividually } from '../../fs/projectFs'
+import { relevanceScore } from '../../ai/textUtils'
 import { IconSparkles, IconDownload, IconLoader } from '../icons'
 import type { ProviderAvailability, QAProvider } from '../../ai/types'
 import { getQAProviders } from '../../ai/providers'
@@ -31,6 +32,7 @@ export default function QATab({ getEditorText, backend }: QATabProps) {
   const [answer, setAnswer] = useState('')
   const [question, setQuestion] = useState('')
   const [askedQuestion, setAskedQuestion] = useState('')
+  const [matchedSection, setMatchedSection] = useState('')
   const [scope, setScope] = useState<QAScope>('section')
   const activeProviderRef = useRef<QAProvider | null>(null)
 
@@ -65,14 +67,32 @@ export default function QATab({ getEditorText, backend }: QATabProps) {
     }
 
     let text: string
+    let sectionTitle = ''
+
     if (scope === 'draft' && handle && project) {
-      text = await readAllSectionsAsText(handle, project.sections)
+      const sections = await readSectionsIndividually(handle, project.sections)
+      if (sections.length === 0) {
+        showToast('No text to search. Write something first.', 'info')
+        return
+      }
+      // Find the most relevant section via keyword overlap
+      let bestIdx = 0
+      let bestScore = -1
+      for (let i = 0; i < sections.length; i++) {
+        const score = relevanceScore(sections[i].text, question)
+        if (score > bestScore) {
+          bestScore = score
+          bestIdx = i
+        }
+      }
+      text = sections[bestIdx].text
+      sectionTitle = sections[bestIdx].title
     } else {
       text = getEditorText()
-    }
-    if (!text.trim()) {
-      showToast('No text to search. Write something first.', 'info')
-      return
+      if (!text.trim()) {
+        showToast('No text to search. Write something first.', 'info')
+        return
+      }
     }
     if (!provider) return
 
@@ -80,6 +100,7 @@ export default function QATab({ getEditorText, backend }: QATabProps) {
     setProgress(null)
     setAnswer('')
     setAskedQuestion(question)
+    setMatchedSection(sectionTitle)
 
     const providers = getQAProviders(backend)
     const runProvider = providers.find(p => p.id === provider.id) ?? providers[0]
@@ -211,6 +232,9 @@ export default function QATab({ getEditorText, backend }: QATabProps) {
       <div className="px-4 py-3 border-b border-border shrink-0">
         <p className="text-[0.75rem] text-text-secondary mb-1">Question</p>
         <p className="text-[0.8125rem] text-text">{askedQuestion}</p>
+        {matchedSection && (
+          <p className="text-[0.75rem] text-text-placeholder mt-1">Answered from: {matchedSection}</p>
+        )}
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="p-3 bg-bg rounded-sm text-[0.8125rem] text-text leading-relaxed whitespace-pre-wrap">
@@ -220,7 +244,7 @@ export default function QATab({ getEditorText, backend }: QATabProps) {
       <div className="px-4 py-3 border-t border-border shrink-0">
         <button
           className="w-full h-8 rounded-sm text-[0.8125rem] font-medium text-accent bg-accent/10 hover:bg-accent/15 transition-colors cursor-pointer"
-          onClick={() => { setToolState('idle'); setAnswer(''); setQuestion('') }}
+          onClick={() => { setToolState('idle'); setAnswer(''); setQuestion(''); setMatchedSection('') }}
         >
           Ask Another
         </button>

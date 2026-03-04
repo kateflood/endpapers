@@ -498,6 +498,32 @@ export async function readAllSectionsAsText(
   return texts.filter(t => t.trim()).join('\n\n')
 }
 
+/**
+ * Read each section file individually, returning title + text pairs.
+ * Useful for section-level AI processing (per-section summaries, Q&A relevance matching).
+ */
+export async function readSectionsIndividually(
+  handle: FileSystemDirectoryHandle,
+  sections: SectionManifestEntry[],
+): Promise<Array<{ id: string; title: string; text: string }>> {
+  const flat = sections.flatMap(e =>
+    e.type === 'section' ? [e] : (e.children ?? [])
+  )
+  const results: Array<{ id: string; title: string; text: string }> = []
+  for (const entry of flat) {
+    if (!entry.file) continue
+    try {
+      const html = await readSectionFile(handle, entry.file)
+      const doc = new DOMParser().parseFromString(html, 'text/html')
+      const text = doc.body.textContent ?? ''
+      if (text.trim()) {
+        results.push({ id: entry.id, title: entry.title, text })
+      }
+    } catch { /* skip missing files */ }
+  }
+  return results
+}
+
 export async function writeSectionFile(
   handle: FileSystemDirectoryHandle,
   filename: string,

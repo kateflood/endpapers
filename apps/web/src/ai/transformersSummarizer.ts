@@ -1,4 +1,4 @@
-import type { SummarizerProvider } from './types'
+import type { SectionInput, SummarizerProvider } from './types'
 import { sendWorkerRequest, getWorkerCapabilities } from './transformersWorkerClient'
 import { getWebGPUModel, getWasmModel } from './modelConfig'
 
@@ -10,6 +10,42 @@ function lengthToTokens(length: string): { maxLength: number; minLength: number 
     case 'medium':
     default:       return { maxLength: 130, minLength: 30 }
   }
+}
+
+async function summarizeOne(
+  text: string,
+  options: { type: string; length: string },
+  callbacks: {
+    onDownloadProgress?: (progress: number) => void
+    onRunning?: () => void
+  },
+): Promise<{ summary: string; cancel: () => void }> {
+  const { maxLength, minLength } = lengthToTokens(options.length)
+
+  const { promise, cancel } = sendWorkerRequest(
+    {
+      type: 'summarize',
+      text,
+      options: {
+        maxLength,
+        minLength,
+        summaryType: options.type,
+        summaryLength: options.length,
+      },
+    },
+    {
+      onDownloadProgress: callbacks.onDownloadProgress,
+      onRunning: callbacks.onRunning,
+    },
+  )
+
+  const response = await promise
+
+  if (response.type !== 'summarize-result') {
+    throw new Error('Unexpected response from worker')
+  }
+
+  return { summary: response.summary, cancel }
 }
 
 export function createTransformersSummarizer(): SummarizerProvider {
@@ -38,35 +74,38 @@ export function createTransformersSummarizer(): SummarizerProvider {
     },
 
     async run(text, options, callbacks) {
-      const { maxLength, minLength } = lengthToTokens(options.length)
-
-      const { promise, cancel } = sendWorkerRequest(
-        {
-          type: 'summarize',
-          text,
-          options: {
-            maxLength,
-            minLength,
-            summaryType: options.type,
-            summaryLength: options.length,
-          },
-        },
-        {
-          onDownloadProgress: callbacks.onDownloadProgress,
-          onRunning: callbacks.onRunning,
-        },
-      )
-
-      cancelFn = cancel
-
-      const response = await promise
-      cancelFn = null
-
-      if (response.type !== 'summarize-result') {
-        throw new Error('Unexpected response from worker')
+      // Single section — summarize directly
+      if (typeof text === 'string') {
+        const { summary, cancel } = await summarizeOne(text, options, callbacks)
+        cancelFn = cancel
+        cancelFn = null
+        return summary
       }
 
-      return response.summary
+      // Multiple sections — summarize each independently
+      const sections = text as SectionInput[]
+      const results: string[] = []
+
+      for (let i = 0; i < sections.length; i++) {
+        const section = sections[i]
+        callbacks.onSectionProgress?.(i + 1, sections.length, section.title)
+
+        const sectionCallbacks = i === 0
+          ? callbacks
+          : { onRunning: callbacks.onRunning }
+
+        const { summary, cancel } = await summarizeOne(
+          section.text,
+          options,
+          sectionCallbacks,
+        )
+        cancelFn = cancel
+        cancelFn = null
+
+        results.push(`## ${section.title}\n\n${summary}`)
+      }
+
+      return results.join('\n\n')
     },
 
     cancel() {

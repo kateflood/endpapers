@@ -18,6 +18,7 @@ export interface ModelConfig {
   readonly pipelineType: PipelineType
   readonly device: ModelDevice
   readonly capabilities: readonly ModelCapability[]
+  readonly maxInputTokens: number
 }
 
 const MODELS = {
@@ -33,6 +34,7 @@ const MODELS = {
     pipelineType: 'text-generation',
     device: 'webgpu',
     capabilities: ['proofread', 'summarize', 'qa'],
+    maxInputTokens: 1800,
   },
   'flan-t5-base': {
     id: 'flan-t5-base',
@@ -46,6 +48,7 @@ const MODELS = {
     pipelineType: 'text2text-generation',
     device: 'wasm',
     capabilities: ['proofread'],
+    maxInputTokens: 450,
   },
   'distilbart-cnn-6-6': {
     id: 'distilbart-cnn-6-6',
@@ -59,6 +62,7 @@ const MODELS = {
     pipelineType: 'summarization',
     device: 'wasm',
     capabilities: ['summarize'],
+    maxInputTokens: 900,
   },
 } as const satisfies Record<string, ModelConfig>
 
