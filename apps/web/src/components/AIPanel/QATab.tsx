@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { AIBackend } from '@endpapers/types'
 import { useToast } from '../../contexts/ToastContext'
 import { useProject } from '../../contexts/ProjectContext'
-import { readSectionsIndividually } from '../../fs/projectFs'
-import { relevanceScore } from '../../ai/textUtils'
+import { retrieveContext } from '../../ai/ragIndex'
+import { getWebGPUModel } from '../../ai/modelConfig'
 import { IconSparkles, IconDownload, IconLoader } from '../icons'
 import type { ProviderAvailability, QAProvider } from '../../ai/types'
 import { getQAProviders } from '../../ai/providers'
@@ -32,7 +32,8 @@ export default function QATab({ getEditorText, backend }: QATabProps) {
   const [answer, setAnswer] = useState('')
   const [question, setQuestion] = useState('')
   const [askedQuestion, setAskedQuestion] = useState('')
-  const [matchedSection, setMatchedSection] = useState('')
+  const [matchedSections, setMatchedSections] = useState<string[]>([])
+  const [indexingProgress, setIndexingProgress] = useState<{ current: number; total: number } | null>(null)
   const [scope, setScope] = useState<QAScope>('section')
   const activeProviderRef = useRef<QAProvider | null>(null)
 
@@ -65,49 +66,60 @@ export default function QATab({ getEditorText, backend }: QATabProps) {
       showToast('Type a question first.', 'info')
       return
     }
+    if (!provider) return
 
     let text: string
-    let sectionTitle = ''
-
-    if (scope === 'draft' && handle && project) {
-      const sections = await readSectionsIndividually(handle, project.sections)
-      if (sections.length === 0) {
-        showToast('No text to search. Write something first.', 'info')
-        return
-      }
-      // Find the most relevant section via keyword overlap
-      let bestIdx = 0
-      let bestScore = -1
-      for (let i = 0; i < sections.length; i++) {
-        const score = relevanceScore(sections[i].text, question)
-        if (score > bestScore) {
-          bestScore = score
-          bestIdx = i
-        }
-      }
-      text = sections[bestIdx].text
-      sectionTitle = sections[bestIdx].title
-    } else {
-      text = getEditorText()
-      if (!text.trim()) {
-        showToast('No text to search. Write something first.', 'info')
-        return
-      }
-    }
-    if (!provider) return
+    let sourceLabels: string[] = []
 
     setToolState('downloading')
     setProgress(null)
     setAnswer('')
     setAskedQuestion(question)
-    setMatchedSection(sectionTitle)
-
-    const providers = getQAProviders(backend)
-    const runProvider = providers.find(p => p.id === provider.id) ?? providers[0]
-    activeProviderRef.current = runProvider
+    setMatchedSections([])
+    setIndexingProgress(null)
 
     try {
-      const result = await runProvider.run(
+      if (scope === 'draft' && handle && project) {
+        const maxTokens = provider.id === 'chrome' ? 4000 : getWebGPUModel().maxInputTokens
+        const result = await retrieveContext(
+          project.id,
+          handle,
+          project.sections,
+          question,
+          maxTokens,
+          {
+            onEmbeddingDownloadProgress(p) { setProgress(p) },
+            onIndexingProgress(current, total) {
+              setToolState('running')
+              setProgress(null)
+              setIndexingProgress({ current, total })
+            },
+          },
+        )
+        if (!result.context.trim()) {
+          showToast('No text to search. Write something first.', 'info')
+          setToolState('idle')
+          return
+        }
+        text = result.context
+        sourceLabels = result.sourceLabels
+      } else {
+        text = getEditorText()
+        if (!text.trim()) {
+          showToast('No text to search. Write something first.', 'info')
+          setToolState('idle')
+          return
+        }
+      }
+
+      setMatchedSections(sourceLabels)
+      setIndexingProgress(null)
+
+      const providers = getQAProviders(backend)
+      const runProvider = providers.find(p => p.id === provider.id) ?? providers[0]
+      activeProviderRef.current = runProvider
+
+      const answer = await runProvider.run(
         text,
         { question },
         {
@@ -117,7 +129,7 @@ export default function QATab({ getEditorText, backend }: QATabProps) {
       )
 
       activeProviderRef.current = null
-      setAnswer(result)
+      setAnswer(answer)
       setToolState('results')
     } catch (err) {
       activeProviderRef.current = null
@@ -215,11 +227,18 @@ export default function QATab({ getEditorText, backend }: QATabProps) {
   }
 
   if (toolState === 'running') {
+    const title = indexingProgress
+      ? `Indexing sections… (${indexingProgress.current}/${indexingProgress.total})`
+      : 'Thinking…'
+    const subtitle = indexingProgress
+      ? 'Building search index for your draft.'
+      : 'Running on-device. This may take a moment.'
+
     return (
       <CenteredState
         icon={<IconLoader size={24} className="text-accent animate-spin" />}
-        title="Thinking…"
-        subtitle="Running on-device. This may take a moment."
+        title={title}
+        subtitle={subtitle}
       >
         <button className={cancelBtnClass} onClick={handleCancel}>Cancel</button>
       </CenteredState>
@@ -232,8 +251,10 @@ export default function QATab({ getEditorText, backend }: QATabProps) {
       <div className="px-4 py-3 border-b border-border shrink-0">
         <p className="text-[0.75rem] text-text-secondary mb-1">Question</p>
         <p className="text-[0.8125rem] text-text">{askedQuestion}</p>
-        {matchedSection && (
-          <p className="text-[0.75rem] text-text-placeholder mt-1">Answered from: {matchedSection}</p>
+        {matchedSections.length > 0 && (
+          <p className="text-[0.75rem] text-text-placeholder mt-1">
+            {matchedSections.length === 1 ? 'Source: ' : 'Sources: '}{matchedSections.join(', ')}
+          </p>
         )}
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4">
@@ -244,7 +265,7 @@ export default function QATab({ getEditorText, backend }: QATabProps) {
       <div className="px-4 py-3 border-t border-border shrink-0">
         <button
           className="w-full h-8 rounded-sm text-[0.8125rem] font-medium text-accent bg-accent/10 hover:bg-accent/15 transition-colors cursor-pointer"
-          onClick={() => { setToolState('idle'); setAnswer(''); setQuestion(''); setMatchedSection('') }}
+          onClick={() => { setToolState('idle'); setAnswer(''); setQuestion(''); setMatchedSections([]) }}
         >
           Ask Another
         </button>

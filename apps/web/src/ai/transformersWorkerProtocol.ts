@@ -9,6 +9,7 @@ export type WorkerRequest =
       summaryType?: string; summaryLength?: string
     } }
   | { type: 'qa'; id: number; text: string; question: string }
+  | { type: 'embed'; id: number; texts: string[] }
   | { type: 'cancel'; id: number }
 
 // Worker → main thread
@@ -19,4 +20,6 @@ export type WorkerResponse =
   | { type: 'proofread-result'; id: number; correctedText: string }
   | { type: 'summarize-result'; id: number; summary: string }
   | { type: 'qa-result'; id: number; answer: string }
+  | { type: 'embed-progress'; id: number; current: number; total: number }
+  | { type: 'embed-result'; id: number; embeddings: number[][] }
   | { type: 'error'; id: number; message: string }

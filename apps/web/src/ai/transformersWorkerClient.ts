@@ -78,6 +78,7 @@ export function sendWorkerRequest(
   callbacks: {
     onDownloadProgress?: (progress: number) => void
     onRunning?: () => void
+    onEmbedProgress?: (current: number, total: number) => void
   },
 ): { promise: Promise<WorkerResponse>; cancel: () => void } {
   const id = nextId++
@@ -110,6 +111,13 @@ export function sendWorkerRequest(
 
         if (msg.type === 'download-progress') {
           callbacks.onDownloadProgress?.(msg.progress)
+          return
+        }
+
+        if (msg.type === 'embed-progress') {
+          if ('current' in msg && 'total' in msg) {
+            callbacks.onEmbedProgress?.(msg.current, msg.total)
+          }
           return
         }
 

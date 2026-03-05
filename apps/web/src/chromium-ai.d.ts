@@ -33,8 +33,10 @@ interface SummarizerCreateOptions {
 }
 
 interface SummarizerInstance {
+  readonly inputQuota: number
   summarize(text: string, options?: { context?: string }): Promise<string>
   summarizeStreaming(text: string, options?: { context?: string }): ReadableStream<string>
+  measureInputUsage(text: string): Promise<number>
   destroy(): void
 }
 

@@ -39,10 +39,6 @@ export function fitsInContext(text: string, maxTokens: number): boolean {
 }
 
 /**
- * Score how relevant a section's text is to a question (keyword overlap).
- * Returns a value between 0 and 1.
- */
-/**
  * Split text into chunks that fit within a token budget.
  * Splits at paragraph boundaries (\n\n), grouping paragraphs greedily.
  * If a single paragraph exceeds maxTokens, splits at sentence boundaries.
@@ -108,4 +104,14 @@ export function relevanceScore(text: string, question: string): number {
   }
 
   return matches / questionKeywords.length
+}
+
+/** FNV-1a hash for fast content-change detection. Returns unsigned 32-bit integer. */
+export function fnvHash(text: string): number {
+  let hash = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return hash >>> 0
 }

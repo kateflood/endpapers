@@ -2,9 +2,9 @@
 // Pure data — no side effects, no async, no imports from @huggingface/transformers.
 // Safe to import from both the main thread and the web worker.
 
-export type PipelineType = 'text-generation' | 'text2text-generation' | 'summarization'
+export type PipelineType = 'text-generation' | 'text2text-generation' | 'summarization' | 'feature-extraction'
 export type ModelDevice = 'webgpu' | 'wasm'
-export type ModelCapability = 'proofread' | 'summarize' | 'qa'
+export type ModelCapability = 'proofread' | 'summarize' | 'qa' | 'embedding'
 
 export interface ModelConfig {
   readonly id: string
@@ -64,6 +64,20 @@ const MODELS = {
     capabilities: ['summarize'],
     maxInputTokens: 900,
   },
+  'all-minilm-l6-v2': {
+    id: 'all-minilm-l6-v2',
+    hfId: 'Xenova/all-MiniLM-L6-v2',
+    dtype: 'q8',
+    label: 'MiniLM L6 v2 (Embeddings)',
+    shortLabel: 'MiniLM',
+    description: 'Sentence embeddings for semantic search',
+    cachePattern: 'all-MiniLM',
+    approxSize: '~23 MB',
+    pipelineType: 'feature-extraction',
+    device: 'wasm',
+    capabilities: ['embedding'],
+    maxInputTokens: 256,
+  },
 } as const satisfies Record<string, ModelConfig>
 
 export function getWebGPUModel(): ModelConfig {
@@ -76,6 +90,10 @@ export function getWasmModel(capability: ModelCapability): ModelConfig {
   )
   if (!model) throw new Error(`No WASM model for capability: ${capability}`)
   return model
+}
+
+export function getEmbeddingModel(): ModelConfig {
+  return MODELS['all-minilm-l6-v2']
 }
 
 export function getAllModels(): ModelConfig[] {

@@ -4,7 +4,7 @@
 
 import { pipeline } from '@huggingface/transformers'
 import type { WorkerRequest, WorkerResponse } from './transformersWorkerProtocol'
-import { getWebGPUModel, getWasmModel } from './modelConfig'
+import { getWebGPUModel, getWasmModel, getEmbeddingModel } from './modelConfig'
 
 // ── State ────────────────────────────────────────────────────────────────
 
@@ -19,6 +19,8 @@ let webgpuPipeline: any = null
 let wasmProofreadPipeline: any = null
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let wasmSummarizePipeline: any = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let embeddingPipeline: any = null
 
 const cancelledIds = new Set<number>()
 
@@ -38,7 +40,11 @@ function progressCallback(id: number) {
 
 /** Strip Qwen3 <think>...</think> reasoning blocks from generated text. */
 function stripThinkingTokens(text: string): string {
-  return text.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+  // Strip closed thinking blocks
+  let result = text.replace(/<think>[\s\S]*?<\/think>/g, '')
+  // Strip unclosed thinking block (model ran out of tokens before closing)
+  result = result.replace(/<think>[\s\S]*$/g, '')
+  return result.trim()
 }
 
 /**
@@ -100,6 +106,16 @@ async function getWasmSummarizePipeline(id: number) {
     progress_callback: progressCallback(id),
   })
   return wasmSummarizePipeline
+}
+
+async function getEmbeddingPipeline(id: number) {
+  if (embeddingPipeline) return embeddingPipeline
+  const model = getEmbeddingModel()
+  embeddingPipeline = await (pipeline as Function)(model.pipelineType, model.hfId, {
+    dtype: model.dtype,
+    progress_callback: progressCallback(id),
+  })
+  return embeddingPipeline
 }
 
 // ── Chat prompt builders (WebGPU path) ───────────────────────────────────
@@ -282,6 +298,32 @@ async function handleQA(id: number, text: string, question: string) {
   }
 }
 
+async function handleEmbed(id: number, texts: string[]) {
+  try {
+    const pipe = await getEmbeddingPipeline(id)
+    if (cancelledIds.has(id)) { cancelledIds.delete(id); return }
+
+    send({ type: 'running', id })
+
+    const embeddings: number[][] = []
+    for (let i = 0; i < texts.length; i++) {
+      if (cancelledIds.has(id)) { cancelledIds.delete(id); return }
+
+      const result = await pipe(texts[i], { pooling: 'mean', normalize: true })
+      embeddings.push(Array.from(result.data as Float32Array))
+      send({ type: 'embed-progress', id, current: i + 1, total: texts.length })
+    }
+
+    if (cancelledIds.has(id)) { cancelledIds.delete(id); return }
+    send({ type: 'embed-result', id, embeddings })
+  } catch (err) {
+    if (!cancelledIds.has(id)) {
+      send({ type: 'error', id, message: err instanceof Error ? err.message : String(err) })
+    }
+    cancelledIds.delete(id)
+  }
+}
+
 // ── Message router ───────────────────────────────────────────────────────
 
 self.onmessage = (e: MessageEvent<WorkerRequest>) => {
@@ -304,5 +346,9 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
   }
   if (msg.type === 'qa') {
     handleQA(msg.id, msg.text, msg.question)
+    return
+  }
+  if (msg.type === 'embed') {
+    handleEmbed(msg.id, msg.texts)
   }
 }
