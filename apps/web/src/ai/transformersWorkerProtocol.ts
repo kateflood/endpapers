@@ -2,7 +2,7 @@
 
 // Main thread → worker
 export type WorkerRequest =
-  | { type: 'init'; id: number }
+  | { type: 'init'; id: number; preferEnhanced?: boolean }
   | { type: 'proofread'; id: number; text: string }
   | { type: 'summarize'; id: number; text: string; options: {
       maxLength: number; minLength: number

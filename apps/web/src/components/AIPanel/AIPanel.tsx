@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { AIBackend } from '@endpapers/types'
+import { setPreferEnhanced } from '../../ai/transformersWorkerClient'
 import { IconSparkles, IconClose } from '../icons'
 import { actionBtnClass, CenteredState } from './shared'
 import ProofreaderTab from './ProofreaderTab'
@@ -23,6 +24,11 @@ export default function AIPanel({
   getEditorText, onClose, aiEnabled, aiBackend, onNavigateSettings, applyCorrection, highlightTextRange, clearHighlight,
 }: AIPanelProps) {
   const [activeTab, setActiveTab] = useState<AITab>('proofread')
+
+  // Sync worker model preference when backend changes
+  useEffect(() => {
+    setPreferEnhanced(aiBackend === 'transformers-enhanced')
+  }, [aiBackend])
 
   const tabClass = (tab: AITab) =>
     `px-2 py-0.5 rounded-sm text-[0.75rem] transition-colors cursor-pointer ${

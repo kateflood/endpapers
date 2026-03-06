@@ -9,19 +9,22 @@ import { createTransformersQA } from './transformersQA'
 
 export function getProofreaderProviders(backend: AIBackend = 'auto'): ProofreaderProvider[] {
   if (backend === 'chrome') return [createChromeProofreader()]
-  if (backend === 'transformers') return [createTransformersProofreader()]
+  if (backend === 'transformers' || backend === 'transformers-enhanced')
+    return [createTransformersProofreader()]
   // 'auto': Chrome first, transformers.js as fallback
   return [createChromeProofreader(), createTransformersProofreader()]
 }
 
 export function getSummarizerProviders(backend: AIBackend = 'auto'): SummarizerProvider[] {
   if (backend === 'chrome') return [createChromeSummarizer()]
-  if (backend === 'transformers') return [createTransformersSummarizer()]
+  if (backend === 'transformers' || backend === 'transformers-enhanced')
+    return [createTransformersSummarizer()]
   return [createChromeSummarizer(), createTransformersSummarizer()]
 }
 
 export function getQAProviders(backend: AIBackend = 'auto'): QAProvider[] {
   if (backend === 'chrome') return [createChromeQA()]
-  if (backend === 'transformers') return [createTransformersQA()]
+  if (backend === 'transformers' || backend === 'transformers-enhanced')
+    return [createTransformersQA()]
   return [createChromeQA(), createTransformersQA()]
 }

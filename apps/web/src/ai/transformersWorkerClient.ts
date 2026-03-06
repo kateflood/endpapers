@@ -6,6 +6,7 @@ let worker: Worker | null = null
 let nextId = 1
 let capabilities: { device: 'webgpu' | 'wasm' } | null = null
 let initPromise: Promise<{ device: 'webgpu' | 'wasm' }> | null = null
+let preferEnhanced = false
 
 const INFERENCE_TIMEOUT_MS = 120_000 // 2 minutes
 
@@ -40,7 +41,7 @@ function initWorker(): Promise<{ device: 'webgpu' | 'wasm' }> {
     }
 
     w.addEventListener('message', onMsg)
-    w.postMessage({ type: 'init', id })
+    w.postMessage({ type: 'init', id, preferEnhanced })
   })
 
   return initPromise
@@ -65,6 +66,17 @@ export function terminateWorker() {
   }
   capabilities = null
   initPromise = null
+}
+
+/**
+ * Set whether the worker should load the enhanced (Phi-3.5) model.
+ * If the preference changed while a worker is alive, terminates it so
+ * the next request spins up a fresh worker with the correct model.
+ */
+export function setPreferEnhanced(enhanced: boolean) {
+  if (enhanced === preferEnhanced) return
+  preferEnhanced = enhanced
+  terminateWorker()
 }
 
 /**

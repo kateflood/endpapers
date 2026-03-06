@@ -219,7 +219,8 @@ export default function SettingsScreen() {
                     options={[
                       { label: 'Auto (Chrome AI if available)', value: 'auto' },
                       { label: 'Chrome Built-in AI', value: 'chrome' },
-                      { label: 'Open Source sLLM (GPU-accelerated)', value: 'transformers' },
+                      { label: 'Local AI · Standard (Qwen3 0.6B, ~400 MB)', value: 'transformers' },
+                      // { label: 'Local AI · Enhanced (Phi-3.5, ~2.2 GB)', value: 'transformers-enhanced' },
                     ]}
                     onChange={v => handleUpdate({ aiBackend: v as AIBackend })}
                   />

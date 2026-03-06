@@ -1,14 +1,15 @@
 // Web worker for transformers.js model inference
-// Supports WebGPU (Qwen3 0.6B) with WASM fallback (Flan-T5 / DistilBART).
+// Supports WebGPU (Qwen3 0.6B or Phi-3.5 Mini) with WASM fallback (Flan-T5 / DistilBART).
 // WebGPU detection runs once on init; all subsequent requests use the detected path.
 
 import { pipeline } from '@huggingface/transformers'
 import type { WorkerRequest, WorkerResponse } from './transformersWorkerProtocol'
-import { getWebGPUModel, getWasmModel, getEmbeddingModel } from './modelConfig'
+import { getWebGPUModel, getEnhancedWebGPUModel, getWasmModel, getEmbeddingModel } from './modelConfig'
 
 // ── State ────────────────────────────────────────────────────────────────
 
 let deviceMode: 'webgpu' | 'wasm' | null = null
+let useEnhancedModel = false
 
 // WebGPU: single shared pipeline for both tasks
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -79,10 +80,11 @@ async function detectWebGPU(): Promise<boolean> {
 
 async function getWebGPUPipeline(id: number) {
   if (webgpuPipeline) return webgpuPipeline
-  const model = getWebGPUModel()
+  const model = useEnhancedModel ? getEnhancedWebGPUModel() : getWebGPUModel()
   webgpuPipeline = await (pipeline as Function)(model.pipelineType, model.hfId, {
     device: 'webgpu',
     dtype: model.dtype,
+    ...(model.id === 'phi-3.5-mini' ? { use_external_data_format: true } : {}),
     progress_callback: progressCallback(id),
   })
   return webgpuPipeline
@@ -162,7 +164,8 @@ function buildQAMessages(text: string, question: string) {
 
 // ── Handlers ─────────────────────────────────────────────────────────────
 
-async function handleInit(id: number) {
+async function handleInit(id: number, preferEnhanced?: boolean) {
+  useEnhancedModel = preferEnhanced ?? false
   try {
     const hasWebGPU = await detectWebGPU()
     deviceMode = hasWebGPU ? 'webgpu' : 'wasm'
@@ -333,7 +336,7 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
     return
   }
   if (msg.type === 'init') {
-    handleInit(msg.id)
+    handleInit(msg.id, msg.preferEnhanced)
     return
   }
   if (msg.type === 'proofread') {

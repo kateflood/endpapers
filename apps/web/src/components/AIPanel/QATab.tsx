@@ -3,7 +3,7 @@ import type { AIBackend } from '@endpapers/types'
 import { useToast } from '../../contexts/ToastContext'
 import { useProject } from '../../contexts/ProjectContext'
 import { retrieveContext } from '../../ai/ragIndex'
-import { getWebGPUModel } from '../../ai/modelConfig'
+import { getWebGPUModel, getEnhancedWebGPUModel } from '../../ai/modelConfig'
 import { IconSparkles, IconDownload, IconLoader } from '../icons'
 import type { ProviderAvailability, QAProvider } from '../../ai/types'
 import { getQAProviders } from '../../ai/providers'
@@ -80,7 +80,9 @@ export default function QATab({ getEditorText, backend }: QATabProps) {
 
     try {
       if (scope === 'draft' && handle && project) {
-        const maxTokens = provider.id === 'chrome' ? 4000 : getWebGPUModel().maxInputTokens
+        const maxTokens = provider.id === 'chrome' ? 4000
+          : backend === 'transformers-enhanced' ? getEnhancedWebGPUModel().maxInputTokens
+          : getWebGPUModel().maxInputTokens
         const result = await retrieveContext(
           project.id,
           handle,

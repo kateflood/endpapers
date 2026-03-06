@@ -17,7 +17,9 @@ export async function getCachedModels(): Promise<CachedModelInfo[]> {
     const keys = await cache.keys()
     const urls = keys.map(k => k.url)
 
-    return getAllModels().map(model => {
+    // Exclude models not yet exposed in the UI
+    const hidden = new Set(['phi-3.5-mini'])
+    return getAllModels().filter(m => !hidden.has(m.id)).map(model => {
       const matchingUrls = urls.filter(u => u.includes(model.cachePattern))
       return {
         ...model,
@@ -27,7 +29,8 @@ export async function getCachedModels(): Promise<CachedModelInfo[]> {
     })
   } catch {
     // Cache API not available
-    return getAllModels().map(model => ({ ...model, cached: false, entryCount: 0 }))
+    const hidden = new Set(['phi-3.5-mini'])
+    return getAllModels().filter(m => !hidden.has(m.id)).map(model => ({ ...model, cached: false, entryCount: 0 }))
   }
 }
 

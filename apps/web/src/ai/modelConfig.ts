@@ -64,6 +64,20 @@ const MODELS = {
     capabilities: ['summarize'],
     maxInputTokens: 900,
   },
+  'phi-3.5-mini': {
+    id: 'phi-3.5-mini',
+    hfId: 'onnx-community/Phi-3.5-mini-instruct-onnx-web',
+    dtype: 'q4f16',
+    label: 'Phi-3.5 Mini (GPU)',
+    shortLabel: 'Phi-3.5',
+    description: 'Enhanced on-device model · WebGPU required',
+    cachePattern: 'Phi-3.5',
+    approxSize: '~2.2 GB',
+    pipelineType: 'text-generation',
+    device: 'webgpu',
+    capabilities: ['proofread', 'summarize', 'qa'],
+    maxInputTokens: 8000,
+  },
   'all-minilm-l6-v2': {
     id: 'all-minilm-l6-v2',
     hfId: 'Xenova/all-MiniLM-L6-v2',
@@ -82,6 +96,10 @@ const MODELS = {
 
 export function getWebGPUModel(): ModelConfig {
   return MODELS['qwen3-0.6b']
+}
+
+export function getEnhancedWebGPUModel(): ModelConfig {
+  return MODELS['phi-3.5-mini']
 }
 
 export function getWasmModel(capability: ModelCapability): ModelConfig {

@@ -2,7 +2,7 @@
 
 export type ProjectType = 'fiction' | 'non-fiction' | 'stories' | 'essays' | 'article' | 'script' | 'custom'
 
-export type AIBackend = 'auto' | 'chrome' | 'transformers'
+export type AIBackend = 'auto' | 'chrome' | 'transformers' | 'transformers-enhanced'
 
 export interface ProjectSettings {
   spellCheck: boolean
