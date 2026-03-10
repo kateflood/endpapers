@@ -21,7 +21,7 @@ import {
 // MemoryFileHandle — wraps an in-memory string
 // ---------------------------------------------------------------------------
 
-class MemoryFileHandle {
+export class MemoryFileHandle {
   readonly kind = 'file' as const
   readonly name: string
   private _content: string
@@ -38,14 +38,20 @@ class MemoryFileHandle {
   }
 
   async createWritable() {
-    const chunks: string[] = []
+    const chunks: (string | ArrayBuffer | ArrayBufferView)[] = []
     const self = this
     return {
-      async write(data: string) {
+      async write(data: string | ArrayBuffer | ArrayBufferView) {
         chunks.push(data)
       },
       async close() {
-        self._content = chunks.join('')
+        self._content = chunks.map(chunk => {
+          if (typeof chunk === 'string') return chunk
+          const bytes = chunk instanceof ArrayBuffer
+            ? new Uint8Array(chunk)
+            : new Uint8Array((chunk as ArrayBufferView).buffer, (chunk as ArrayBufferView).byteOffset, (chunk as ArrayBufferView).byteLength)
+          return new TextDecoder().decode(bytes)
+        }).join('')
         self._parent._files.set(self.name, self)
       },
     }
@@ -56,7 +62,7 @@ class MemoryFileHandle {
 // MemoryDirectoryHandle — in-memory directory tree
 // ---------------------------------------------------------------------------
 
-class MemoryDirectoryHandle {
+export class MemoryDirectoryHandle {
   readonly kind = 'directory' as const
   readonly name: string
   _files = new Map<string, MemoryFileHandle>()

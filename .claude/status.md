@@ -176,17 +176,25 @@ Export (build order step 11 — complete)
   - Filename: Lastname_TITLE_date.doc
 
 
-What's next (v1 — UI polish)
-----------------------------
+Version Control / Backups (v2 — complete)
+-----------------------------------------
+- Opt-in backup system: compressed zip files stored in project's `backups/` folder
+- Backup on close (when leaving editor or hiding tab) + manual backup via header button
+- Retention limit (default 10), auto-prune oldest backups
+- BackupsDialog: list, create, restore, delete backups
+- Settings: enable toggle, backup-on-close toggle, retention count, manage button
+- Library: fflate for zip compression
 
-Step 12: UI polish
-  - Visual consistency across all screens
-  - Empty states audit for all views
-  - Error handling for file operations
-  - Responsive layout improvements
-  - General UX refinements
 
-See planning/v2.md for post-v1 features (AI chat, Firebase Auth, settings/account).
+What's next (v2)
+-----------------
+- Whole Manuscript Search
+- Tests & QA support
+- Text to Speech
+- AI Chat Sidebar
+- Firebase Auth
+- Settings (AI & Account)
+- Polish & Limits
 
 
 Key technical decisions

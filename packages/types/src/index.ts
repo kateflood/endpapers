@@ -14,6 +14,9 @@ export interface ProjectSettings {
   showWordCount: boolean
   aiEnabled?: boolean
   aiBackend?: AIBackend
+  backupsEnabled?: boolean          // default false (opt-in)
+  backupOnClose?: boolean           // default true (when backups enabled)
+  backupRetentionCount?: number     // default 10
 }
 
 export interface AuthorInfo {

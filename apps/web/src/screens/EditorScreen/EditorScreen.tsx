@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { WritingLogEntry } from '@endpapers/types'
 import { todayISODate, isThisWeek, isThisMonth, findSectionTitle, sumWritingLog } from '@endpapers/utils'
-import { useProject } from '../../contexts/ProjectContext'
+import { useProject, DEMO_RECENT_ID, PREVIEW_RECENT_ID } from '../../contexts/ProjectContext'
 import SectionsSidebar from '../../components/SectionsSidebar/SectionsSidebar'
 import RichTextEditor from '../../components/RichTextEditor/RichTextEditor'
 import type { RichTextEditorHandle } from '../../components/RichTextEditor/RichTextEditor'
 import WritingGoalsPanel from '../../components/WritingGoalsPanel/WritingGoalsPanel'
 import AIPanel from '../../components/AIPanel/AIPanel'
-import { IconSettings, IconFolderOpen, IconChevronDown, IconSparkles, IconBookOpen } from '../../components/icons'
+import { IconSettings, IconFolderOpen, IconChevronDown, IconSparkles, IconBookOpen, IconArchive } from '../../components/icons'
+import BackupsDialog from '../../components/BackupsDialog/BackupsDialog'
 
 // ── Goal progress helpers ────────────────────────────────────────────────
 
@@ -74,8 +75,9 @@ function GoalRing({ progress }: { progress: number }) {
 
 export default function EditorScreen() {
   const navigate = useNavigate()
-  const { project, recentId, closeProject, activeSectionId, sectionWordCounts, writingLog, sessionStartWords, updateGoals } = useProject()
+  const { project, recentId, closeProject, closePreview, restoreFromPreview, activeSectionId, sectionWordCounts, writingLog, sessionStartWords, updateGoals } = useProject()
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [backupsOpen, setBackupsOpen] = useState(false)
   type RightPanel = 'goals' | 'ai' | null
   const [rightPanel, setRightPanel] = useState<RightPanel>(null)
   const [focusMode, setFocusMode] = useState(false)
@@ -138,6 +140,7 @@ export default function EditorScreen() {
   if (!project) return null
 
   const titleBarBtnClass = 'flex items-center gap-1 px-2 py-1 rounded-sm text-xs text-white/45 hover:bg-white/[0.08] transition-colors cursor-pointer'
+  const bannerClass = 'flex items-center justify-center px-4 h-8 bg-accent/[0.06] border-b border-border text-[0.8125rem] text-text-secondary shrink-0 gap-2'
 
   return (
     <div className={`h-screen flex flex-col overflow-hidden bg-bg text-text${focusMode ? ' focus-mode-active' : ''}${project.settings?.darkMode ? ' dark' : ''}`}>
@@ -183,6 +186,15 @@ export default function EditorScreen() {
 
           {/* Right side */}
           <div className="ml-auto flex items-center gap-1">
+            {project.settings?.backupsEnabled === true && recentId !== PREVIEW_RECENT_ID && (
+              <button
+                className={titleBarBtnClass}
+                onClick={() => setBackupsOpen(true)}
+                title="Backups"
+              >
+                <IconArchive size={13} />
+              </button>
+            )}
             <button
               className={titleBarBtnClass}
               onClick={() => navigate('/reference')}
@@ -220,14 +232,38 @@ export default function EditorScreen() {
       )}
 
       {/* Demo banner */}
-      {!focusMode && recentId === 'demo-project' && (
-        <div className="flex items-center justify-center px-4 h-8 bg-accent/[0.06] border-b border-border text-[0.8125rem] text-text-secondary shrink-0 gap-2">
+      {!focusMode && recentId === DEMO_RECENT_ID && (
+        <div className={bannerClass}>
           <span>You are viewing the demo project.</span>
           <button
             className="text-accent hover:underline cursor-pointer"
             onClick={() => { closeProject(); navigate('/') }}
           >
             Back to home
+          </button>
+        </div>
+      )}
+
+      {/* Backup preview banner */}
+      {!focusMode && recentId === PREVIEW_RECENT_ID && (
+        <div className={bannerClass}>
+          <span>You are previewing a backup (read-only).</span>
+          <button
+            className="text-accent hover:underline cursor-pointer"
+            onClick={() => {
+              if (confirm('This will replace all current project files with this backup.\n\nA backup of the current state will be created first.\n\nContinue?')) {
+                restoreFromPreview()
+              }
+            }}
+          >
+            Restore this backup
+          </button>
+          <span className="text-text-placeholder">·</span>
+          <button
+            className="text-text-secondary hover:underline cursor-pointer"
+            onClick={() => closePreview()}
+          >
+            Close preview
           </button>
         </div>
       )}
@@ -285,6 +321,7 @@ export default function EditorScreen() {
         )}
       </div>
 
+      {backupsOpen && <BackupsDialog onClose={() => setBackupsOpen(false)} />}
     </div>
   )
 }

@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useState, useRef, useEffect, useCallback, type ReactNode } from 'react'
 import type { Project, ProjectType, ProjectSettings, SectionManifestEntry, WritingLog, WritingGoals, AuthorInfo } from '@endpapers/types'
 import { writeProjectJson, writeWritingLog, readSectionFile } from '../fs/projectFs'
+import { createBackup, restoreBackup, unzipToMemoryHandle } from '../fs/backups'
 import { DEMO_PROJECT, DEMO_WRITING_LOG } from '../demo/demoContent'
 import { createDemoHandle } from '../demo/memoryHandle'
 import { todayISODate, countWords } from '@endpapers/utils'
@@ -15,7 +16,12 @@ interface ProjectContextValue {
   writingLog: WritingLog
   sessionStartWords: number
   openProject: (handle: FileSystemDirectoryHandle, project: Project, recentId: string, writingLog: WritingLog) => void
-  closeProject: () => void
+  closeProject: () => Promise<void>
+  createManualBackup: () => Promise<void>
+  previewBackupFilename: string | null
+  openBackupPreview: (filename: string) => Promise<void>
+  closePreview: () => void
+  restoreFromPreview: () => Promise<void>
   setActiveSectionId: (id: string | null) => void
   updateSections: (sections: SectionManifestEntry[]) => Promise<void>
   updateExtras: (extras: SectionManifestEntry[]) => Promise<void>
@@ -31,6 +37,14 @@ interface ProjectContextValue {
 }
 
 const EMPTY_LOG: WritingLog = { goals: {}, log: [] }
+
+export const DEMO_RECENT_ID = 'demo-project'
+export const PREVIEW_RECENT_ID = 'backup-preview'
+
+/** Returns true for demo and backup-preview projects (in-memory, no persistence). */
+export function isEphemeral(id: string | null): boolean {
+  return id === DEMO_RECENT_ID || id === PREVIEW_RECENT_ID
+}
 
 // Mirrors TipTap's getText() behaviour: block elements add whitespace so words
 // across paragraph boundaries are counted separately by countWords().
@@ -65,6 +79,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const handleRef = useRef<FileSystemDirectoryHandle | null>(null)
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Backup refs
+  const lastBackupTimeRef = useRef(0)
+  const lastSaveTimeRef = useRef(0)
+  const projectRef = useRef<Project | null>(null)
+  const recentIdRef = useRef<string | null>(null)
+
+  // Preview state
+  const [previewBackupFilename, setPreviewBackupFilename] = useState<string | null>(null)
+  const previewSourceHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
+  const previewSourceProjectRef = useRef<Project | null>(null)
+  const previewSourceRecentIdRef = useRef<string | null>(null)
+  const previewSourceWritingLogRef = useRef<WritingLog>(EMPTY_LOG)
+
   function openProject(
     newHandle: FileSystemDirectoryHandle,
     newProject: Project,
@@ -86,6 +113,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setSessionStartWords(newWritingLog.lastKnownTotal ?? 0)
     writingLogRef.current = newWritingLog
     handleRef.current = newHandle
+    projectRef.current = newProject
+    recentIdRef.current = newRecentId
+    lastSaveTimeRef.current = 0
+    lastBackupTimeRef.current = 0
 
     // Eagerly load word counts for all sections (Draft + Drawer + Front matter + Back matter)
     const allSections = [
@@ -104,8 +135,27 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function closeProject() {
+  /** Returns true if conditions are met for an automatic backup (enabled, not ephemeral, stale). */
+  function shouldAutoBackup(): boolean {
+    const p = projectRef.current
+    if (!handleRef.current || !p?.settings?.backupsEnabled || p?.settings?.backupOnClose === false) return false
+    if (isEphemeral(recentIdRef.current)) return false
+    return lastSaveTimeRef.current > lastBackupTimeRef.current && Date.now() - lastBackupTimeRef.current > 60_000
+  }
+
+  async function closeProject() {
     if (flushTimerRef.current) clearTimeout(flushTimerRef.current)
+
+    // Backup on close if enabled and there are unsaved changes
+    if (shouldAutoBackup()) {
+      try {
+        await createBackup(handleRef.current!, projectRef.current?.settings?.backupRetentionCount)
+        lastBackupTimeRef.current = Date.now()
+      } catch {
+        // Best-effort
+      }
+    }
+
     setHandle(null)
     setProject(null)
     setRecentId(null)
@@ -115,11 +165,18 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setSessionStartWords(0)
     writingLogRef.current = EMPTY_LOG
     handleRef.current = null
+    projectRef.current = null
+    recentIdRef.current = null
+    setPreviewBackupFilename(null)
+    previewSourceHandleRef.current = null
+    previewSourceProjectRef.current = null
+    previewSourceRecentIdRef.current = null
+    previewSourceWritingLogRef.current = EMPTY_LOG
   }
 
   function openDemoProject() {
     const demoHandle = createDemoHandle()
-    openProject(demoHandle, DEMO_PROJECT, 'demo-project', DEMO_WRITING_LOG)
+    openProject(demoHandle, DEMO_PROJECT, DEMO_RECENT_ID, DEMO_WRITING_LOG)
   }
 
   // Debounced: 2 seconds after last word count change, flush delta to writing-log.json
@@ -138,7 +195,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       const updated: WritingLog = { ...log, log: newEntries, lastKnownTotal: currentTotal }
       writingLogRef.current = updated
       setWritingLog(updated)
-      writeWritingLog(h, updated).catch(() => {})
+      writeWritingLog(h, updated).then(() => { lastSaveTimeRef.current = Date.now() }).catch(() => {})
     }, 2000)
   }
 
@@ -151,11 +208,84 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  const openBackupPreview = useCallback(async (filename: string) => {
+    const h = handleRef.current
+    if (!h) return
+    // Unzip first — only mutate state once we know the operation succeeded
+    const { handle: memHandle, project: backupProject, writingLog: backupLog } = await unzipToMemoryHandle(h, filename)
+    // Stash the real project state for closePreview / restore
+    previewSourceHandleRef.current = h
+    previewSourceProjectRef.current = projectRef.current
+    previewSourceRecentIdRef.current = recentIdRef.current
+    previewSourceWritingLogRef.current = writingLogRef.current
+    setPreviewBackupFilename(filename)
+    openProject(memHandle, backupProject, PREVIEW_RECENT_ID, backupLog)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const closePreview = useCallback(() => {
+    const h = previewSourceHandleRef.current
+    const p = previewSourceProjectRef.current
+    const rid = previewSourceRecentIdRef.current
+    const wl = previewSourceWritingLogRef.current
+    if (!h || !p || !rid) return
+    // Re-open the original project
+    openProject(h, p, rid, wl)
+    setPreviewBackupFilename(null)
+    previewSourceHandleRef.current = null
+    previewSourceProjectRef.current = null
+    previewSourceRecentIdRef.current = null
+    previewSourceWritingLogRef.current = EMPTY_LOG
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const restoreFromPreview = useCallback(async () => {
+    const h = previewSourceHandleRef.current
+    const fn = previewBackupFilename
+    if (!h || !fn) return
+    try {
+      const retentionCount = previewSourceProjectRef.current?.settings?.backupRetentionCount
+      await createBackup(h, retentionCount, 'Pre-restore backup')
+      await restoreBackup(h, fn)
+      showToast('Backup restored. Reloading…', 'info')
+      setTimeout(() => window.location.reload(), 500)
+    } catch {
+      showToast('Failed to restore backup.', 'error')
+    }
+  }, [previewBackupFilename, showToast])
+
+  const createManualBackup = useCallback(async () => {
+    const h = handleRef.current
+    if (!h || isEphemeral(recentIdRef.current)) return
+    try {
+      await createBackup(h, projectRef.current?.settings?.backupRetentionCount)
+      lastBackupTimeRef.current = Date.now()
+      showToast('Backup created.', 'info')
+    } catch {
+      showToast('Failed to create backup.', 'error')
+    }
+  }, [showToast])
+
+  // Backup on visibilitychange (tab hide / close)
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState !== 'hidden') return
+      if (!shouldAutoBackup()) return
+      createBackup(handleRef.current!, projectRef.current?.settings?.backupRetentionCount)
+        .then(() => { lastBackupTimeRef.current = Date.now() })
+        .catch(() => {})
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [])
+
   async function saveProject(updated: Project) {
     if (!handle) return
     setProject(updated)
+    projectRef.current = updated
     try {
       await writeProjectJson(handle, updated)
+      lastSaveTimeRef.current = Date.now()
     } catch {
       showToast('Failed to save project — check file permissions.', 'error')
     }
@@ -237,6 +367,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         updateProjectMeta,
         updateSectionWordCount,
         updateGoals,
+        createManualBackup,
+        previewBackupFilename,
+        openBackupPreview,
+        closePreview,
+        restoreFromPreview,
         openDemoProject,
       }}
     >

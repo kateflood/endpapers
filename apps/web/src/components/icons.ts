@@ -52,4 +52,5 @@ export {
   AlertCircle as IconAlertCircle,
   SpellCheck2 as IconSpellCheck,
   Info as IconInfo,
+  Archive as IconArchive,
 } from 'lucide-react'

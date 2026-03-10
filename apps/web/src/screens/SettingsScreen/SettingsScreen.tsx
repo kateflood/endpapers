@@ -7,6 +7,7 @@ import { PROJECT_TYPES } from '../../components/NewProjectDialog/NewProjectDialo
 import { IconArrowLeft } from '../../components/icons'
 import ImportDialog from '../../components/ImportDialog/ImportDialog'
 import ExportDialog from '../../components/ExportDialog/ExportDialog'
+import BackupsDialog from '../../components/BackupsDialog/BackupsDialog'
 import { getCachedModels, deleteModel, deleteAllModels, type CachedModelInfo } from '../../ai/modelCache'
 import { terminateWorker, getWorkerCapabilities } from '../../ai/transformersWorkerClient'
 
@@ -15,6 +16,7 @@ export default function SettingsScreen() {
   const { project, handle, updateSettings, updateProjectMeta } = useProject()
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [backupsOpen, setBackupsOpen] = useState(false)
   const [cachedModels, setCachedModels] = useState<CachedModelInfo[]>([])
   const [modelsLoading, setModelsLoading] = useState(true)
   const [gpuStatus, setGpuStatus] = useState<'checking' | 'webgpu' | 'wasm'>('checking')
@@ -202,6 +204,45 @@ export default function SettingsScreen() {
           </section>
 
           <section>
+            <h2 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-text-secondary mb-1">Backups</h2>
+            <div className="border border-border rounded-md overflow-hidden divide-y divide-border">
+              <SettingRow
+                label="Enable backups"
+                description="Allow creating backup snapshots of your project."
+                checked={settings.backupsEnabled === true}
+                onChange={v => handleUpdate({ backupsEnabled: v })}
+              />
+              {settings.backupsEnabled === true && (
+                <SettingRow
+                  label="Backup on close"
+                  description="Automatically create a backup when leaving the editor or closing the tab."
+                  checked={settings.backupOnClose !== false}
+                  onChange={v => handleUpdate({ backupOnClose: v })}
+                />
+              )}
+              <SettingSelectRow
+                label="Keep backups"
+                description="Maximum number of backups to retain."
+                value={String(settings.backupRetentionCount ?? 10)}
+                options={[5, 10, 20, 50].map(n => ({ label: `Last ${n}`, value: String(n) }))}
+                onChange={v => handleUpdate({ backupRetentionCount: Number(v) })}
+              />
+              <div className="flex items-center justify-between px-4 py-3 bg-surface">
+                <div>
+                  <div className="text-[0.9375rem] text-text">Manage backups</div>
+                  <div className="text-[0.8125rem] text-text-secondary mt-0.5">View, restore, or delete project backups.</div>
+                </div>
+                <button
+                  className="px-3 h-7 rounded-sm text-[0.8125rem] border border-border text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer shrink-0 ml-6"
+                  onClick={() => setBackupsOpen(true)}
+                >
+                  Manage…
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section>
             <h2 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-text-secondary mb-1">AI Tools</h2>
             <div className="border border-border rounded-md overflow-hidden divide-y divide-border">
               <SettingRow
@@ -330,6 +371,7 @@ export default function SettingsScreen() {
 
       {importOpen && <ImportDialog onClose={() => setImportOpen(false)} />}
       {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
+      {backupsOpen && <BackupsDialog onClose={() => setBackupsOpen(false)} />}
     </div>
   )
 }
