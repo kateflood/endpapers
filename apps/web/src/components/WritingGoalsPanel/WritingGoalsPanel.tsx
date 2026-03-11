@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react'
 import type { WritingLog, WritingGoals } from '@endpapers/types'
 import { todayISODate, isThisWeek, isThisMonth, sumWritingLog } from '@endpapers/utils'
-import { IconClose } from '../icons'
 
 interface Props {
   writingLog: WritingLog
   sessionWords: number
   totalWords: number
   onUpdateGoals: (goals: WritingGoals) => Promise<void>
-  onClose: () => void
 }
 
 function formatLogDate(iso: string): string {
@@ -76,7 +74,7 @@ function GoalRow({ label, sublabel, current, goal, draft, onDraftChange, onSave 
 // Panel
 // ---------------------------------------------------------------------------
 
-export default function WritingGoalsPanel({ writingLog, sessionWords, totalWords, onUpdateGoals, onClose }: Props) {
+export default function WritingGoalsPanel({ writingLog, sessionWords, totalWords, onUpdateGoals }: Props) {
   const { goals, log, lastKnownTotal } = writingLog
   const today = todayISODate()
 
@@ -118,20 +116,7 @@ export default function WritingGoalsPanel({ writingLog, sessionWords, totalWords
     .slice(0, 7)
 
   return (
-    <aside className="w-72 shrink-0 border-l border-border bg-surface flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center px-4 h-12 border-b border-border shrink-0">
-        <span className="text-[0.9375rem] font-medium text-text flex-1">Writing Goals</span>
-        <button
-          className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          <IconClose size={14} />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto">
+    <div>
         {/* Hint when no goals are set */}
         {goals.session === undefined && goals.daily === undefined && goals.weekly === undefined && goals.monthly === undefined && log.length === 0 && (
           <p className="px-4 pt-3 text-[0.8125rem] text-text-placeholder">
@@ -191,7 +176,6 @@ export default function WritingGoalsPanel({ writingLog, sessionWords, totalWords
             </div>
           </div>
         )}
-      </div>
-    </aside>
+    </div>
   )
 }

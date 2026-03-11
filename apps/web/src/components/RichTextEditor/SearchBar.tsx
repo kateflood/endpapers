@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/core'
 import { searchKey } from './searchExtension'
 import { IconClose } from '../icons'
+import FloatingBar from '../FloatingBar'
 
 interface Props {
   editor: Editor
@@ -58,7 +59,7 @@ export default function SearchBar({ editor, onClose }: Props) {
     : ''
 
   return (
-    <div className="flex items-center gap-2 px-3 h-10 border-b border-border bg-surface shrink-0 flex-wrap">
+    <FloatingBar className="flex items-center gap-2 ml-auto mr-3 mt-1.5 px-3 h-10 w-fit">
       {/* Find */}
       <input
         ref={findInputRef}
@@ -103,6 +104,6 @@ export default function SearchBar({ editor, onClose }: Props) {
 
       {/* Close */}
       <button type="button" className={btnClass} onClick={onClose} aria-label="Close find bar"><IconClose size={14} /></button>
-    </div>
+    </FloatingBar>
   )
 }

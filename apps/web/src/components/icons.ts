@@ -53,4 +53,6 @@ export {
   SpellCheck2 as IconSpellCheck,
   Info as IconInfo,
   Archive as IconArchive,
+  Type as IconType,
+  PanelRight as IconPanelRight,
 } from 'lucide-react'

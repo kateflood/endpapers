@@ -1,19 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { findSectionTitle, todayISODate, isThisWeek, isThisMonth, sumWritingLog } from '@endpapers/utils'
 import type { WritingLogEntry } from '@endpapers/types'
-import { todayISODate, isThisWeek, isThisMonth, findSectionTitle, sumWritingLog } from '@endpapers/utils'
 import { useProject, DEMO_RECENT_ID, PREVIEW_RECENT_ID } from '../../contexts/ProjectContext'
 import SectionsSidebar from '../../components/SectionsSidebar/SectionsSidebar'
 import RichTextEditor from '../../components/RichTextEditor/RichTextEditor'
 import type { RichTextEditorHandle } from '../../components/RichTextEditor/RichTextEditor'
+import EditorToolbar from '../../components/RichTextEditor/EditorToolbar'
+import { useEditorSetup } from '../../components/RichTextEditor/useEditorSetup'
 import WritingGoalsPanel from '../../components/WritingGoalsPanel/WritingGoalsPanel'
 import AIPanel from '../../components/AIPanel/AIPanel'
-import { IconSettings, IconFolderOpen, IconChevronDown, IconSparkles, IconBookOpen, IconArchive } from '../../components/icons'
+import {
+  IconSettings, IconFolderOpen, IconChevronDown, IconBookOpen, IconArchive,
+  IconPanelLeft, IconType, IconSparkles, IconTarget, IconMaximize,
+} from '../../components/icons'
 import BackupsDialog from '../../components/BackupsDialog/BackupsDialog'
+import ConfirmDialog from '../../components/ConfirmDialog'
+import ToolbarButton from '../../components/ToolbarButton'
+import Card, { CardHeader } from '../../components/Card'
 
-// ── Goal progress helpers ────────────────────────────────────────────────
-
-/** Returns 0–1 progress toward the first active goal (session > daily > weekly > monthly), or -1 if no goal is set. */
 function goalProgress(
   sessionWords: number,
   totalWords: number,
@@ -35,53 +40,21 @@ function goalProgress(
   return -1
 }
 
-/** A 16px circular progress ring. -1 = no goal (empty ring), 0–1 = partial/full fill. */
-function GoalRing({ progress }: { progress: number }) {
-  const r = 6
-  const circumference = 2 * Math.PI * r
-  const noGoal = progress < 0
-  const pct = noGoal ? 0 : progress
-  const offset = circumference - pct * circumference
-  const met = progress >= 1
-
-  // Color: no goal → dim, in progress → white-ish, met → green
-  const ringColor = noGoal
-    ? 'rgba(255,255,255,0.2)'
-    : met
-      ? '#68D391'
-      : 'rgba(255,255,255,0.7)'
-
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" className="shrink-0">
-      {/* Background track */}
-      <circle cx="8" cy="8" r={r} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2" />
-      {/* Progress arc */}
-      {!noGoal && (
-        <circle
-          cx="8" cy="8" r={r}
-          fill="none"
-          stroke={ringColor}
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          transform="rotate(-90 8 8)"
-          className="transition-all duration-500"
-        />
-      )}
-    </svg>
-  )
-}
-
 export default function EditorScreen() {
   const navigate = useNavigate()
   const { project, recentId, closeProject, closePreview, restoreFromPreview, activeSectionId, sectionWordCounts, writingLog, sessionStartWords, updateGoals } = useProject()
+  const editor = useEditorSetup()
+  const editorRef = useRef<RichTextEditorHandle>(null)
+
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [showToolbar, setShowToolbar] = useState(true)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [backupsOpen, setBackupsOpen] = useState(false)
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false)
   type RightPanel = 'goals' | 'ai' | null
   const [rightPanel, setRightPanel] = useState<RightPanel>(null)
   const [focusMode, setFocusMode] = useState(false)
-  const editorRef = useRef<RichTextEditorHandle>(null)
 
   const draftSectionIds = new Set(
     (project?.sections ?? []).flatMap(e =>
@@ -92,6 +65,10 @@ export default function EditorScreen() {
     .filter(([id]) => draftSectionIds.has(id))
     .reduce((acc, [, count]) => acc + count, 0)
   const sessionWords = Math.max(0, totalWords - sessionStartWords)
+  const goalPct = goalProgress(sessionWords, totalWords, writingLog.log, writingLog.lastKnownTotal, writingLog.goals)
+
+  const font = project?.settings?.font ?? 'Inter, sans-serif'
+  const fontSize = project?.settings?.fontSize ?? 16
 
   // Resolve active section title for breadcrumb
   const activeSectionTitle = activeSectionId
@@ -101,7 +78,7 @@ export default function EditorScreen() {
       ?? findSectionTitle(project?.backMatter ?? [], activeSectionId)
     : null
 
-  // Cmd/Ctrl+. toggles focus mode (only when a section is active)
+  // Cmd/Ctrl+. toggles focus mode
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === '.') {
@@ -113,7 +90,7 @@ export default function EditorScreen() {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [activeSectionId])
 
-  // Sync browser fullscreen with focus mode state
+  // Sync browser fullscreen with focus mode
   useEffect(() => {
     if (focusMode) {
       document.documentElement.requestFullscreen?.().catch(() => {})
@@ -122,12 +99,10 @@ export default function EditorScreen() {
     }
   }, [focusMode])
 
-  // Exit focus mode when user exits fullscreen via browser (Escape or browser UI)
+  // Exit focus mode when user exits fullscreen via browser
   useEffect(() => {
     function onFullscreenChange() {
-      if (!document.fullscreenElement) {
-        setFocusMode(false)
-      }
+      if (!document.fullscreenElement) setFocusMode(false)
     }
     document.addEventListener('fullscreenchange', onFullscreenChange)
     return () => document.removeEventListener('fullscreenchange', onFullscreenChange)
@@ -144,6 +119,7 @@ export default function EditorScreen() {
 
   return (
     <div className={`h-screen flex flex-col overflow-hidden bg-bg text-text${focusMode ? ' focus-mode-active' : ''}${project.settings?.darkMode ? ' dark' : ''}`}>
+
       {/* Title bar */}
       {!focusMode && (
         <div className="flex items-center gap-2 px-4 shrink-0 h-10 bg-navy">
@@ -163,10 +139,7 @@ export default function EditorScreen() {
               <linearGradient id="titlebar-ls" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#2B6CB0"/><stop offset="100%" stopColor="#1A365D"/></linearGradient>
             </defs>
           </svg>
-          <span
-            className="font-serif text-sm text-white/70 cursor-pointer"
-            onClick={() => { closeProject(); navigate('/') }}
-          >
+          <span className="font-serif text-sm text-white/70 cursor-pointer" onClick={() => { closeProject(); navigate('/') }}>
             endpapers
           </span>
 
@@ -177,9 +150,7 @@ export default function EditorScreen() {
             {activeSectionTitle && (
               <>
                 <IconChevronDown size={9} className="rotate-[-90deg] opacity-40" />
-                <span className="truncate max-w-[200px] text-white/60">
-                  {activeSectionTitle}
-                </span>
+                <span className="truncate max-w-[200px] text-white/60">{activeSectionTitle}</span>
               </>
             )}
           </div>
@@ -187,44 +158,14 @@ export default function EditorScreen() {
           {/* Right side */}
           <div className="ml-auto flex items-center gap-1">
             {project.settings?.backupsEnabled === true && recentId !== PREVIEW_RECENT_ID && (
-              <button
-                className={titleBarBtnClass}
-                onClick={() => setBackupsOpen(true)}
-                title="Backups"
-              >
+              <button className={titleBarBtnClass} onClick={() => setBackupsOpen(true)} title="Backups">
                 <IconArchive size={13} />
               </button>
             )}
-            <button
-              className={titleBarBtnClass}
-              onClick={() => navigate('/reference')}
-              title="Reference"
-            >
+            <button className={titleBarBtnClass} onClick={() => navigate('/reference')} title="Reference">
               <IconBookOpen size={13} />
             </button>
-            <button
-              className={`${titleBarBtnClass}${rightPanel === 'ai' ? ' text-white/80' : ''}`}
-              onClick={() => setRightPanel(p => p === 'ai' ? null : 'ai')}
-              title="AI Tools"
-            >
-              <IconSparkles size={13} />
-            </button>
-            <button
-              className={`${titleBarBtnClass}${rightPanel === 'goals' ? ' text-white/80' : ''}`}
-              onClick={() => setRightPanel(p => p === 'goals' ? null : 'goals')}
-              title="Writing goals"
-            >
-              <GoalRing progress={goalProgress(
-                sessionWords, totalWords,
-                writingLog.log, writingLog.lastKnownTotal,
-                writingLog.goals,
-              )} />
-            </button>
-            <button
-              className={titleBarBtnClass}
-              onClick={() => navigate('/settings')}
-              title="Settings"
-            >
+            <button className={titleBarBtnClass} onClick={() => navigate('/settings')} title="Settings">
               <IconSettings size={13} />
             </button>
           </div>
@@ -235,10 +176,7 @@ export default function EditorScreen() {
       {!focusMode && recentId === DEMO_RECENT_ID && (
         <div className={bannerClass}>
           <span>You are viewing the demo project.</span>
-          <button
-            className="text-accent hover:underline cursor-pointer"
-            onClick={() => { closeProject(); navigate('/') }}
-          >
+          <button className="text-accent hover:underline cursor-pointer" onClick={() => { closeProject(); navigate('/') }}>
             Back to home
           </button>
         </div>
@@ -248,80 +186,123 @@ export default function EditorScreen() {
       {!focusMode && recentId === PREVIEW_RECENT_ID && (
         <div className={bannerClass}>
           <span>You are previewing a backup (read-only).</span>
-          <button
-            className="text-accent hover:underline cursor-pointer"
-            onClick={() => {
-              if (confirm('This will replace all current project files with this backup.\n\nA backup of the current state will be created first.\n\nContinue?')) {
-                restoreFromPreview()
-              }
-            }}
-          >
+          <button className="text-accent hover:underline cursor-pointer" onClick={() => setRestoreConfirmOpen(true)}>
             Restore this backup
           </button>
           <span className="text-text-placeholder">·</span>
-          <button
-            className="text-text-secondary hover:underline cursor-pointer"
-            onClick={() => closePreview()}
-          >
+          <button className="text-text-secondary hover:underline cursor-pointer" onClick={() => closePreview()}>
             Close preview
           </button>
         </div>
       )}
 
-      {/* Body */}
+      {/* Three-column body */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sections sidebar */}
-        {!focusMode && sidebarOpen && (
-          <aside className="w-60 shrink-0 border-r border-border bg-surface flex flex-col overflow-hidden">
-            <SectionsSidebar />
+
+        {/* Left column — sidebar toggle + toolbar toggle + optional sections */}
+        {!focusMode && (
+          <aside className={`flex flex-col bg-surface overflow-hidden shrink-0${sidebarOpen ? ' w-64' : ''}`}>
+            <div className="h-10 flex items-center px-1 shrink-0 gap-1">
+              <ToolbarButton icon={<IconPanelLeft size={15} />} title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'} onClick={() => setSidebarOpen(v => !v)} active={sidebarOpen} />
+              <ToolbarButton icon={<IconType size={15} />} title={showToolbar ? 'Hide toolbar' : 'Show toolbar'} onClick={() => setShowToolbar(v => !v)} active={showToolbar} />
+            </div>
+            {sidebarOpen && (
+              <div className="flex-1 overflow-y-auto pl-3 pr-1">
+                <SectionsSidebar />
+              </div>
+            )}
           </aside>
         )}
 
-        {/* Editor area */}
-        <main className="flex-1 flex overflow-hidden">
+        {/* Center column — editor */}
+        <main className="flex-1 flex flex-col overflow-hidden">
+          {/* Center column header */}
+          {!focusMode && showToolbar && (
+            <div className="bg-surface shrink-0 flex items-center justify-center h-10 px-2">
+                <EditorToolbar
+                  editor={editor}
+                  defaultFont={font}
+                  defaultFontSize={fontSize}
+                  onSearch={() => setSearchOpen(o => !o)}
+                  searchActive={searchOpen}
+                  onExport={() => setExportOpen(true)}
+                />
+            </div>
+          )}
           <RichTextEditor
             ref={editorRef}
+            editor={editor}
             focusMode={focusMode}
             onExitFocus={() => setFocusMode(false)}
-            sidebarOpen={sidebarOpen}
-            onToggleSidebar={() => setSidebarOpen(o => !o)}
-            onToggleFocus={() => setFocusMode(f => f ? false : !!activeSectionId)}
-            focusModeEnabled={!!activeSectionId}
             totalWords={totalWords}
+            goalProgress={goalPct}
+            searchOpen={searchOpen}
+            onOpenSearch={() => setSearchOpen(true)}
+            onCloseSearch={() => setSearchOpen(false)}
+            exportOpen={exportOpen}
+            onCloseExport={() => setExportOpen(false)}
           />
         </main>
 
-        {/* Right panels — only one at a time, hidden in focus mode */}
-        {!focusMode && rightPanel === 'goals' && (
-          <WritingGoalsPanel
-            writingLog={writingLog}
-            sessionWords={sessionWords}
-            totalWords={totalWords}
-            onUpdateGoals={updateGoals}
-            onClose={() => setRightPanel(null)}
-          />
-        )}
-        {!focusMode && rightPanel === 'ai' && (
-          <AIPanel
-            getEditorText={() => editorRef.current?.getText() ?? ''}
-            onClose={() => { editorRef.current?.clearHighlight(); setRightPanel(null) }}
-            aiEnabled={project.settings?.aiEnabled ?? false}
-            aiBackend={project.settings?.aiBackend ?? 'auto'}
-            onNavigateSettings={() => navigate('/settings')}
-            applyCorrection={(start, end, replacement) => {
-              editorRef.current?.replaceTextRange(start, end, replacement)
-            }}
-            highlightTextRange={(start, end) => {
-              editorRef.current?.highlightTextRange(start, end)
-            }}
-            clearHighlight={() => {
-              editorRef.current?.clearHighlight()
-            }}
-          />
+        {/* Right column — panel toggle buttons + optional panel content */}
+        {!focusMode && (
+          <aside className={`flex flex-col bg-surface overflow-hidden shrink-0${rightPanel ? ' w-80' : ''}`}>
+            <div className="h-10 flex items-center px-1 shrink-0 justify-end gap-1">
+              <ToolbarButton icon={<IconSparkles size={15} />} title="AI Tools" onClick={() => { if (rightPanel === 'ai') editorRef.current?.clearHighlight(); setRightPanel(p => p === 'ai' ? null : 'ai') }} active={rightPanel === 'ai'} />
+              <ToolbarButton icon={<IconTarget size={15} />} title="Writing Goals" onClick={() => setRightPanel(p => p === 'goals' ? null : 'goals')} active={rightPanel === 'goals'} />
+              <div className="hidden lg:flex">
+                <ToolbarButton icon={<IconMaximize size={15} />} title={activeSectionId ? 'Enter focus mode' : 'Select a section to focus'} onClick={() => setFocusMode(f => f ? false : !!activeSectionId)} disabled={!activeSectionId} />
+              </div>
+            </div>
+            {rightPanel === 'goals' && (
+              <div className="flex-1 overflow-y-auto pr-3 pl-1 pt-2">
+                <Card>
+                  <CardHeader title="Writing Goals" onClose={()=>setRightPanel(null)} />
+                  <WritingGoalsPanel
+                    writingLog={writingLog}
+                    sessionWords={sessionWords}
+                    totalWords={totalWords}
+                    onUpdateGoals={updateGoals}
+                  />
+                </Card>
+              </div>
+            )}
+            {rightPanel === 'ai' && (
+              <div className="flex-1 overflow-y-auto pr-3 pl-1 pt-2">
+                <Card>
+                  <CardHeader title="On device AI (BETA)" onClose={()=>setRightPanel(null)} />
+                  <AIPanel
+                    getEditorText={() => editorRef.current?.getText() ?? ''}
+                    aiEnabled={project.settings?.aiEnabled ?? false}
+                    aiBackend={project.settings?.aiBackend ?? 'auto'}
+                    onNavigateSettings={() => navigate('/settings')}
+                    applyCorrection={(start, end, replacement) => {
+                      editorRef.current?.replaceTextRange(start, end, replacement)
+                    }}
+                    highlightTextRange={(start, end) => {
+                      editorRef.current?.highlightTextRange(start, end)
+                    }}
+                    clearHighlight={() => {
+                      editorRef.current?.clearHighlight()
+                    }}
+                  />
+                </Card>
+              </div>
+            )}
+          </aside>
         )}
       </div>
 
       {backupsOpen && <BackupsDialog onClose={() => setBackupsOpen(false)} />}
+      {restoreConfirmOpen && (
+        <ConfirmDialog
+          title="Restore backup"
+          message="This will replace all current project files with this backup. A backup of the current state will be created first."
+          confirmLabel="Restore"
+          onConfirm={restoreFromPreview}
+          onClose={() => setRestoreConfirmOpen(false)}
+        />
+      )}
     </div>
   )
 }

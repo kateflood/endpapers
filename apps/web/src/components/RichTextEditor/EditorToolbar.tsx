@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import type { Editor } from '@tiptap/core'
+import FloatingBar from '../FloatingBar'
 import {
   IconUndo, IconRedo,
   IconH1, IconH2, IconH3,
@@ -7,7 +8,6 @@ import {
   IconBulletList, IconOrderedList, IconBlockquote,
   IconAlignLeft, IconAlignCenter, IconAlignRight,
   IconImage, IconSearch, IconDownload,
-  IconPanelLeft, IconMaximize, IconMinimize,
 } from '../icons'
 
 export const FONTS = [
@@ -28,30 +28,20 @@ const ICON_SIZE = 15
 
 interface Props {
   editor: Editor | null
-  searchOpen: boolean
-  onToggleSearch: () => void
-  onExportSection: () => void
   defaultFont: string
   defaultFontSize: number
-  sidebarOpen: boolean
-  onToggleSidebar: () => void
-  onToggleFocus: () => void
-  focusMode: boolean
-  focusModeEnabled: boolean
+  onSearch: () => void
+  searchActive: boolean
+  onExport: () => void
 }
 
 export default function EditorToolbar({
   editor,
-  searchOpen,
-  onToggleSearch,
-  onExportSection,
   defaultFont,
   defaultFontSize,
-  sidebarOpen,
-  onToggleSidebar,
-  onToggleFocus,
-  focusMode,
-  focusModeEnabled,
+  onSearch,
+  searchActive,
+  onExport,
 }: Props) {
   const imageInputRef = useRef<HTMLInputElement>(null)
 
@@ -86,12 +76,7 @@ export default function EditorToolbar({
   }
 
   return (
-    <div className="flex items-center px-3 h-11 border-b border-border bg-surface shrink-0 gap-0.5 overflow-x-auto">
-
-      {/* Sidebar toggle */}
-      {iconBtn(<IconPanelLeft size={ICON_SIZE} />, sidebarOpen, onToggleSidebar, 'Toggle sidebar')}
-
-      {sep}
+    <FloatingBar className="flex items-center px-3 h-10 gap-0.5 overflow-x-auto">
 
       {/* Formatting tools — only shown when editor is active */}
       {editor && (
@@ -169,37 +154,12 @@ export default function EditorToolbar({
 
           {sep}
 
-          {/* Find */}
-          {iconBtn(<IconSearch size={ICON_SIZE} />, searchOpen, onToggleSearch, 'Search & replace')}
-
-          {sep}
-
-          {/* Export section */}
-          {iconBtn(<IconDownload size={ICON_SIZE} />, false, onExportSection, 'Export section')}
+          {/* Search + Export */}
+          {iconBtn(<IconSearch size={ICON_SIZE} />, searchActive, onSearch, 'Search & replace')}
+          {iconBtn(<IconDownload size={ICON_SIZE} />, false, onExport, 'Export section')}
         </>
       )}
 
-      {/* Right side — Focus */}
-      <div className="ml-auto flex items-center gap-1 shrink-0">
-        <button
-          type="button"
-          onClick={onToggleFocus}
-          disabled={!focusModeEnabled}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all ${
-            focusMode
-              ? 'border-navy bg-navy text-white'
-              : focusModeEnabled
-                ? 'border-border text-text-secondary hover:border-accent hover:text-accent hover:bg-accent/5 cursor-pointer'
-                : 'border-border text-text-placeholder cursor-default'
-          }`}
-        >
-          {focusMode
-            ? <IconMinimize size={12} />
-            : <IconMaximize size={12} />
-          }
-          {focusMode ? 'Exit Focus' : 'Focus'}
-        </button>
-      </div>
-    </div>
+    </FloatingBar>
   )
 }

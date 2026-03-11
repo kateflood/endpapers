@@ -1,24 +1,14 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import Placeholder from '@tiptap/extension-placeholder'
-import TextAlign from '@tiptap/extension-text-align'
-import Image from '@tiptap/extension-image'
-import Underline from '@tiptap/extension-underline'
-import Highlight from '@tiptap/extension-highlight'
-import { TextStyle } from '@tiptap/extension-text-style'
-import { FontFamily } from '@tiptap/extension-font-family'
-import { FontSize } from './fontSizeExtension'
+import { EditorContent } from '@tiptap/react'
+import type { Editor } from '@tiptap/core'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { SectionManifestEntry, ProjectSettings } from '@endpapers/types'
 import { countWords, estimatePages, findSectionTitle } from '@endpapers/utils'
 import { useProject } from '../../contexts/ProjectContext'
 import { useToast } from '../../contexts/ToastContext'
 import { readSectionFile, writeSectionFile } from '../../fs/projectFs'
-import { SearchReplace } from './searchExtension'
-import { AIHighlight } from './aiHighlightExtension'
 import { IconClose, IconClock } from '../icons'
-import EditorToolbar from './EditorToolbar'
+import FloatingBar from '../FloatingBar'
 import SearchBar from './SearchBar'
 import ExportDialog from '../ExportDialog/ExportDialog'
 
@@ -45,13 +35,16 @@ const DEFAULTS: ProjectSettings = {
 }
 
 interface RichTextEditorProps {
+  editor: Editor | null
   focusMode?: boolean
   onExitFocus: () => void
-  sidebarOpen: boolean
-  onToggleSidebar: () => void
-  onToggleFocus: () => void
-  focusModeEnabled: boolean
   totalWords: number
+  goalProgress: number
+  searchOpen: boolean
+  onOpenSearch: () => void
+  onCloseSearch: () => void
+  exportOpen: boolean
+  onCloseExport: () => void
 }
 
 /** Map a character offset in editor.getText() output to a ProseMirror position. */
@@ -63,7 +56,6 @@ function textOffsetToPos(doc: ProseMirrorNode, targetOffset: number): number | n
   doc.descendants((node, pos) => {
     if (result !== null) return false
     if (node.isTextblock) {
-      // editor.getText() inserts '\n\n' between blocks by default
       if (!isFirstBlock) {
         textOffset += 2
         if (targetOffset <= textOffset) {
@@ -96,24 +88,44 @@ export interface RichTextEditorHandle {
   clearHighlight: () => void
 }
 
+function GoalRing({ progress }: { progress: number }) {
+  const r = 6
+  const circumference = 2 * Math.PI * r
+  const noGoal = progress < 0
+  const offset = circumference - Math.min(1, Math.max(0, progress)) * circumference
+  const met = progress >= 1
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" className="shrink-0">
+      <circle cx="8" cy="8" r={r} fill="none" stroke="#E2E8F0" strokeWidth="2" />
+      {!noGoal && (
+        <circle cx="8" cy="8" r={r} fill="none" stroke={met ? '#48BB78' : '#2B6CB0'}
+          strokeWidth="2" strokeLinecap="round"
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          transform="rotate(-90 8 8)" className="transition-all duration-500"
+        />
+      )}
+    </svg>
+  )
+}
+
 const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(function RichTextEditor({
+  editor,
   focusMode = false,
   onExitFocus,
-  sidebarOpen,
-  onToggleSidebar,
-  onToggleFocus,
-  focusModeEnabled,
   totalWords,
+  goalProgress,
+  searchOpen,
+  onOpenSearch,
+  onCloseSearch,
+  exportOpen,
+  onCloseExport,
 }, ref) {
   const { project, handle, activeSectionId, sectionWordCounts, updateSectionWordCount } = useProject()
   const { showToast } = useToast()
   const settings: ProjectSettings = { ...DEFAULTS, ...project?.settings }
-  // font/fontSize are the document defaults; inline marks override them per-selection
   const font = settings.font
   const fontSize = settings.fontSize
   const [loading, setLoading] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [exportOpen, setExportOpen] = useState(false)
   const [exitBtnVisible, setExitBtnVisible] = useState(false)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -132,7 +144,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
     }
   }, [focusMode])
 
-  // Refs so TipTap callbacks always have the current values (avoid stale closures)
+  // Refs so editor callbacks always have the current values
   const handleRef = useRef(handle)
   useEffect(() => { handleRef.current = handle }, [handle])
 
@@ -145,22 +157,10 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
   const activeFileRef = useRef<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3] }, underline: false }),
-      SearchReplace,
-      AIHighlight,
-      Placeholder.configure({ placeholder: 'Start writing…' }),
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Image,
-      Underline,
-      Highlight,
-      TextStyle,
-      FontFamily,
-      FontSize,
-    ],
-    content: '',
-    onUpdate: ({ editor: e }) => {
+  // Attach update handler to editor
+  useEffect(() => {
+    if (!editor) return
+    function onUpdate({ editor: e }: { editor: Editor }) {
       if (!activeFileRef.current) return
       const file = activeFileRef.current
       if (handleRef.current) {
@@ -174,13 +174,10 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
       if (activeSectionIdRef.current) {
         updateWordCountRef.current(activeSectionIdRef.current, countWords(text))
       }
-    },
-    coreExtensionOptions: {
-      clipboardTextSerializer: {
-        blockSeparator: '\n',
-      },
-    },
-  })
+    }
+    editor.on('update', onUpdate)
+    return () => { editor.off('update', onUpdate) }
+  }, [editor, showToast])
 
   useImperativeHandle(ref, () => ({
     getText: () => editor?.getText() ?? '',
@@ -198,7 +195,6 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
       const to = textOffsetToPos(editor.state.doc, endIndex)
       if (from !== null && to !== null) {
         editor.commands.setAIHighlight(from, to)
-        // Scroll the decoration into view after it renders
         requestAnimationFrame(() => {
           const el = editor.view.dom.querySelector('.ai-highlight, .ai-highlight-caret')
           el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -216,18 +212,17 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'f' && activeSectionId) {
         e.preventDefault()
-        setSearchOpen(true)
+        onOpenSearch()
       }
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [activeSectionId])
+  }, [activeSectionId, onOpenSearch])
 
   // Load section when activeSectionId changes; flush any pending save first
   useEffect(() => {
     if (!handle || !project || !editor) return
 
-    // Flush pending save for the previous section
     if (debounceRef.current) {
       clearTimeout(debounceRef.current)
       debounceRef.current = null
@@ -276,12 +271,12 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
   }, [editor])
 
   function closeSearch() {
-    setSearchOpen(false)
+    onCloseSearch()
     editor?.commands.setSearchTerm('')
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden relative">
+    <div className="flex-1 flex flex-col overflow-hidden relative bg-surface">
       {/* Focus mode exit button */}
       {focusMode && (
         <button
@@ -292,25 +287,12 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
           <IconClose size={16} />
         </button>
       )}
+
       {!focusMode && searchOpen && editor && (
         <SearchBar editor={editor} onClose={closeSearch} />
       )}
-      {!focusMode && (
-        <EditorToolbar
-          editor={editor}
-          searchOpen={searchOpen}
-          onToggleSearch={() => setSearchOpen(o => !o)}
-          onExportSection={() => setExportOpen(true)}
-          defaultFont={font}
-          defaultFontSize={fontSize}
-          sidebarOpen={sidebarOpen}
-          onToggleSidebar={onToggleSidebar}
-          onToggleFocus={onToggleFocus}
-          focusMode={focusMode}
-          focusModeEnabled={focusModeEnabled}
-        />
-      )}
-      <div className={`flex-1 overflow-y-auto${settings.paperMode && !focusMode ? ' bg-bg py-10 px-6' : ''}`}>
+
+      <div className={`flex-1 overflow-y-auto${settings.paperMode && !focusMode ? ' bg-surface py-10 px-6' : ''}`}>
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-[0.9375rem] text-text-placeholder">Loading…</p>
@@ -332,6 +314,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
           </div>
         )}
       </div>
+
       {!focusMode && activeSectionId && !loading && (() => {
         const sectionWords = sectionWordCounts[activeSectionId] ?? 0
         const wpp = settings.wordsPerPage
@@ -339,7 +322,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
         const totalPages = estimatePages(totalWords, wpp)
         const readMin = Math.max(1, Math.ceil(totalWords / 200))
         return (
-          <div className="shrink-0 border-t border-border h-8 flex items-center px-4 gap-4 text-[0.75rem] text-text-secondary bg-surface">
+          <FloatingBar className="flex items-center ml-auto mr-3 mb-3 px-4 h-8 w-fit gap-4 text-[0.75rem] text-text-secondary">
             <span><strong className="font-medium text-text-secondary">{sectionWords.toLocaleString()}</strong> words</span>
             <span><strong className="font-medium text-text-secondary">~{sectionPages}</strong> {sectionPages === 1 ? 'pg' : 'pgs'}</span>
             <div className="w-px h-3.5 bg-border" />
@@ -350,13 +333,19 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
               <IconClock size={11} />
               <strong className="font-medium text-text-secondary">~{readMin} min</strong> read
             </span>
-            <div className="ml-auto flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-              <span className="text-text-placeholder">Saved locally</span>
-            </div>
-          </div>
+            {goalProgress >= 0 && (
+              <>
+                <div className="w-px h-3.5 bg-border" />
+                <span className="flex items-center gap-1.5">
+                  <GoalRing progress={goalProgress} />
+                  <strong className="font-medium text-text-secondary">{Math.round(goalProgress * 100)}%</strong> goal
+                </span>
+              </>
+            )}
+          </FloatingBar>
         )
       })()}
+
       {exportOpen && activeSectionId && editor && (() => {
         const sectionTitle =
           findSectionTitle(project?.sections ?? [], activeSectionId) ??
@@ -367,7 +356,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
         return (
           <ExportDialog
             sectionContext={{ title: sectionTitle, html: editor.getHTML() }}
-            onClose={() => setExportOpen(false)}
+            onClose={onCloseExport}
           />
         )
       })()}

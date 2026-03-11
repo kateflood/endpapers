@@ -102,7 +102,7 @@ export default function SortableListItem({
       <div
         className={`group relative flex items-center h-7 gap-1 ${paddingLeft} pr-2 cursor-pointer select-none text-[0.8125rem] ${
           isActive
-            ? 'text-text bg-active'
+            ? 'text-text font-medium'
             : dimWhenInactive
               ? 'text-text-secondary hover:bg-hover hover:text-text'
               : 'text-text hover:bg-hover'
@@ -111,6 +111,10 @@ export default function SortableListItem({
         onDoubleClick={onInlineRename ? () => startEditing() : undefined}
       >
         <DragHandle attributes={attributes} listeners={listeners} />
+
+        {isActive && !editing && (
+          <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+        )}
 
         {editing ? (
           <input

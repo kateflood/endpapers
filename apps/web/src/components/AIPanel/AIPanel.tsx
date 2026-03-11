@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { AIBackend } from '@endpapers/types'
 import { setPreferEnhanced } from '../../ai/transformersWorkerClient'
-import { IconSparkles, IconClose } from '../icons'
+import { IconSparkles } from '../icons'
 import { actionBtnClass, CenteredState } from './shared'
 import ProofreaderTab from './ProofreaderTab'
 import SummarizerTab from './SummarizerTab'
@@ -11,7 +11,6 @@ type AITab = 'proofread' | 'summarize' | 'qa'
 
 interface AIPanelProps {
   getEditorText: () => string
-  onClose: () => void
   aiEnabled: boolean
   aiBackend: AIBackend
   onNavigateSettings: () => void
@@ -21,7 +20,7 @@ interface AIPanelProps {
 }
 
 export default function AIPanel({
-  getEditorText, onClose, aiEnabled, aiBackend, onNavigateSettings, applyCorrection, highlightTextRange, clearHighlight,
+  getEditorText, aiEnabled, aiBackend, onNavigateSettings, applyCorrection, highlightTextRange, clearHighlight,
 }: AIPanelProps) {
   const [activeTab, setActiveTab] = useState<AITab>('proofread')
 
@@ -38,24 +37,10 @@ export default function AIPanel({
     }`
 
   return (
-    <aside className="w-80 shrink-0 border-l border-border bg-surface flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center px-4 h-12 border-b border-border shrink-0 gap-2">
-        <IconSparkles size={14} className="text-accent shrink-0" />
-        <span className="text-[0.9375rem] font-medium text-text">AI Tools</span>
-        <div className="flex-1" />
-        <button
-          className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer shrink-0"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          <IconClose size={14} />
-        </button>
-      </div>
-
+    <>
       {/* Tab bar */}
       {aiEnabled && (
-        <div className="flex items-center gap-1 px-4 py-1.5 border-b border-border shrink-0 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex items-center gap-1 px-4 py-1.5 shrink-0 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           <button className={tabClass('proofread')} onClick={() => setActiveTab('proofread')}>
             Proofread
           </button>
@@ -94,6 +79,6 @@ export default function AIPanel({
           <QATab getEditorText={getEditorText} backend={aiBackend} />
         )}
       </div>
-    </aside>
+    </>
   )
 }

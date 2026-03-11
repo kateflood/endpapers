@@ -9,9 +9,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import {
-  SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
 import { generateId } from '@endpapers/utils'
@@ -20,7 +18,7 @@ import { useProject } from '../../contexts/ProjectContext'
 import { createSectionFile, deleteSectionFile } from '../../fs/projectFs'
 import SortableListItem from '../SortableListItem'
 import SortableGroupItem from '../SortableGroupItem'
-import CollapsibleSectionHeader from '../CollapsibleSectionHeader'
+import SidebarZone from '../SidebarZone'
 import { IconPlus, IconFolderOpen } from '../icons'
 
 // ---------------------------------------------------------------------------
@@ -464,106 +462,73 @@ export default function SectionsSidebar() {
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={event => { void handleDragEnd(event) }}>
       <div className="flex flex-col flex-1 overflow-hidden">
 
-        {/* Project title + subtitle */}
-        {(project.title || project.subtitle) && (
-          <div className="px-4 pt-4 pb-3 border-b border-border shrink-0">
-            {project.title && (
-              <div className="text-[0.875rem] font-semibold text-text truncate leading-snug">
-                {project.title}
-              </div>
-            )}
-            {project.subtitle && (
-              <div className="text-[0.75rem] text-text-secondary mt-1 truncate leading-snug">
-                {project.subtitle}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Single scrollable area */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pl-3 pr-1 pt-10">
 
           {/* Draft zone */}
-          <div className="py-1">
-            <CollapsibleSectionHeader
-              label="Draft"
-              isCollapsed={collapsedZones.has('draft')}
-              onToggle={() => toggleZone('draft')}
-              actions={[
-                { icon: IconPlus, onClick: () => { void handleAddSection('draft') }, title: 'Add section' },
-                { icon: IconFolderOpen, onClick: () => { void handleAddGroup('draft') }, title: 'Add group' },
-              ]}
-            />
-            {!collapsedZones.has('draft') && (
-              <SortableContext items={draftTopLevelIds} strategy={verticalListSortingStrategy}>
-                {sections.length === 0 && (
-                  <p className="px-4 py-2 text-[0.8125rem] text-text-placeholder">No sections yet.</p>
-                )}
-                {sections.map(renderEntry)}
-              </SortableContext>
-            )}
-          </div>
+          <SidebarZone
+            label="Draft"
+            isCollapsed={collapsedZones.has('draft')}
+            onToggle={() => toggleZone('draft')}
+            actions={[
+              { icon: IconPlus, onClick: () => { void handleAddSection('draft') }, title: 'Add section' },
+              { icon: IconFolderOpen, onClick: () => { void handleAddGroup('draft') }, title: 'Add group' },
+            ]}
+            itemIds={draftTopLevelIds}
+            isEmpty={sections.length === 0}
+            emptyMessage="No sections yet."
+          >
+            {sections.map(renderEntry)}
+          </SidebarZone>
 
           {/* Drawer zone */}
-          <div className="border-t border-border py-1">
-            <CollapsibleSectionHeader
-              label="Drawer"
-              isCollapsed={collapsedZones.has('drawer')}
-              onToggle={() => toggleZone('drawer')}
-              actions={[
-                { icon: IconPlus, onClick: () => { void handleAddSection('drawer') }, title: 'Add section' },
-                { icon: IconFolderOpen, onClick: () => { void handleAddGroup('drawer') }, title: 'Add group' },
-              ]}
-            />
-            {!collapsedZones.has('drawer') && (
-              <SortableContext items={drawerTopLevelIds} strategy={verticalListSortingStrategy}>
-                {extras.length === 0 && (
-                  <p className="px-4 py-2 text-[0.8125rem] text-text-placeholder">Drag sections here to set aside.</p>
-                )}
-                {extras.map(renderEntry)}
-              </SortableContext>
-            )}
-          </div>
+          <SidebarZone
+            label="Drawer"
+            isCollapsed={collapsedZones.has('drawer')}
+            onToggle={() => toggleZone('drawer')}
+            actions={[
+              { icon: IconPlus, onClick: () => { void handleAddSection('drawer') }, title: 'Add section' },
+              { icon: IconFolderOpen, onClick: () => { void handleAddGroup('drawer') }, title: 'Add group' },
+            ]}
+            itemIds={drawerTopLevelIds}
+            isEmpty={extras.length === 0}
+            emptyMessage="Drag sections here to set aside."
+            className="mt-2"
+          >
+            {extras.map(renderEntry)}
+          </SidebarZone>
 
           {/* Front matter zone */}
-          <div className="border-t border-border py-1">
-            <CollapsibleSectionHeader
-              label="Front matter"
-              isCollapsed={collapsedZones.has('front')}
-              onToggle={() => toggleZone('front')}
-              actions={[
-                { icon: IconPlus, onClick: () => { void handleAddSection('front') }, title: 'Add section' },
-              ]}
-            />
-            {!collapsedZones.has('front') && (
-              <SortableContext items={frontTopLevelIds} strategy={verticalListSortingStrategy}>
-                {front.length === 0 && (
-                  <p className="px-4 py-2 text-[0.8125rem] text-text-placeholder">Add front matter sections here.</p>
-                )}
-                {front.map(renderEntry)}
-              </SortableContext>
-            )}
-          </div>
+          <SidebarZone
+            label="Front matter"
+            isCollapsed={collapsedZones.has('front')}
+            onToggle={() => toggleZone('front')}
+            actions={[
+              { icon: IconPlus, onClick: () => { void handleAddSection('front') }, title: 'Add section' },
+            ]}
+            itemIds={frontTopLevelIds}
+            isEmpty={front.length === 0}
+            emptyMessage="Add front matter sections here."
+            className="mt-2"
+          >
+            {front.map(renderEntry)}
+          </SidebarZone>
 
           {/* Back matter zone */}
-          <div className="border-t border-border py-1">
-            <CollapsibleSectionHeader
-              label="Back matter"
-              isCollapsed={collapsedZones.has('back')}
-              onToggle={() => toggleZone('back')}
-              actions={[
-                { icon: IconPlus, onClick: () => { void handleAddSection('back') }, title: 'Add section' },
-              ]}
-            />
-            {!collapsedZones.has('back') && (
-              <SortableContext items={backTopLevelIds} strategy={verticalListSortingStrategy}>
-                {back.length === 0 && (
-                  <p className="px-4 py-2 text-[0.8125rem] text-text-placeholder">Add back matter sections here.</p>
-                )}
-                {back.map(renderEntry)}
-              </SortableContext>
-            )}
-          </div>
+          <SidebarZone
+            label="Back matter"
+            isCollapsed={collapsedZones.has('back')}
+            onToggle={() => toggleZone('back')}
+            actions={[
+              { icon: IconPlus, onClick: () => { void handleAddSection('back') }, title: 'Add section' },
+            ]}
+            itemIds={backTopLevelIds}
+            isEmpty={back.length === 0}
+            emptyMessage="Add back matter sections here."
+            className="mt-2"
+          >
+            {back.map(renderEntry)}
+          </SidebarZone>
 
         </div>
 
