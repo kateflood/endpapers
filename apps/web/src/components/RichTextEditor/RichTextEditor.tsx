@@ -40,6 +40,7 @@ interface RichTextEditorProps {
   onExitFocus: () => void
   totalWords: number
   goalProgress: number
+  goalInfo: GoalInfo | null
   searchOpen: boolean
   onOpenSearch: () => void
   onCloseSearch: () => void
@@ -88,23 +89,51 @@ export interface RichTextEditorHandle {
   clearHighlight: () => void
 }
 
-function GoalRing({ progress }: { progress: number }) {
+export interface GoalInfo {
+  label: string
+  current: number
+  target: number
+}
+
+function GoalRing({ progress, goalInfo }: { progress: number; goalInfo: GoalInfo | null }) {
   const r = 6
   const circumference = 2 * Math.PI * r
   const noGoal = progress < 0
   const offset = circumference - Math.min(1, Math.max(0, progress)) * circumference
   const met = progress >= 1
+  const pct = Math.min(100, Math.round(progress * 100))
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" className="shrink-0">
-      <circle cx="8" cy="8" r={r} fill="none" stroke="#E2E8F0" strokeWidth="2" />
-      {!noGoal && (
-        <circle cx="8" cy="8" r={r} fill="none" stroke={met ? '#48BB78' : '#2B6CB0'}
-          strokeWidth="2" strokeLinecap="round"
-          strokeDasharray={circumference} strokeDashoffset={offset}
-          transform="rotate(-90 8 8)" className="transition-all duration-500"
-        />
+    <span className="group/goal relative flex items-center">
+      <svg width="14" height="14" viewBox="0 0 16 16" className="shrink-0">
+        <circle cx="8" cy="8" r={r} fill="none" stroke="#E2E8F0" strokeWidth="2" />
+        {!noGoal && (
+          <circle cx="8" cy="8" r={r} fill="none" stroke={met ? '#48BB78' : '#B45309'}
+            strokeWidth="2" strokeLinecap="round"
+            strokeDasharray={circumference} strokeDashoffset={offset}
+            transform="rotate(-90 8 8)" className="transition-all duration-500"
+          />
+        )}
+      </svg>
+      {goalInfo && (
+        <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-44 opacity-0 group-hover/goal:opacity-100 transition-opacity duration-150 z-50">
+          <div className="bg-surface border border-border rounded-lg shadow-md px-3 py-2.5">
+            <div className="flex items-baseline justify-between mb-1.5">
+              <span className="text-[0.75rem] font-medium text-text">{goalInfo.label}</span>
+              <span className={`text-[0.75rem] tabular-nums ${met ? 'text-accent font-medium' : 'text-text-secondary'}`}>
+                {goalInfo.current.toLocaleString()} / {goalInfo.target.toLocaleString()}
+              </span>
+            </div>
+            <div className="h-1 bg-border rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${met ? 'bg-[#48BB78]' : 'bg-accent'}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <p className="text-[0.6875rem] text-text-placeholder mt-1.5">{pct}% complete</p>
+          </div>
+        </div>
       )}
-    </svg>
+    </span>
   )
 }
 
@@ -114,6 +143,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
   onExitFocus,
   totalWords,
   goalProgress,
+  goalInfo,
   searchOpen,
   onOpenSearch,
   onCloseSearch,
@@ -337,7 +367,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
               <>
                 <div className="w-px h-3.5 bg-border" />
                 <span className="flex items-center gap-1.5">
-                  <GoalRing progress={goalProgress} />
+                  <GoalRing progress={goalProgress} goalInfo={goalInfo} />
                   <strong className="font-medium text-text-secondary">{Math.round(goalProgress * 100)}%</strong> goal
                 </span>
               </>

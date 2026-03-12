@@ -5,7 +5,7 @@ import type { WritingLogEntry } from '@endpapers/types'
 import { useProject, DEMO_RECENT_ID, PREVIEW_RECENT_ID } from '../../contexts/ProjectContext'
 import SectionsSidebar from '../../components/SectionsSidebar/SectionsSidebar'
 import RichTextEditor from '../../components/RichTextEditor/RichTextEditor'
-import type { RichTextEditorHandle } from '../../components/RichTextEditor/RichTextEditor'
+import type { RichTextEditorHandle, GoalInfo } from '../../components/RichTextEditor/RichTextEditor'
 import EditorToolbar from '../../components/RichTextEditor/EditorToolbar'
 import { useEditorSetup } from '../../components/RichTextEditor/useEditorSetup'
 import WritingGoalsPanel from '../../components/WritingGoalsPanel/WritingGoalsPanel'
@@ -19,13 +19,13 @@ import ConfirmDialog from '../../components/ConfirmDialog'
 import ToolbarButton from '../../components/ToolbarButton'
 import Card, { CardHeader } from '../../components/Card'
 
-function goalProgress(
+function computeGoal(
   sessionWords: number,
   totalWords: number,
   log: WritingLogEntry[],
   lastKnownTotal: number | undefined,
   goals: { session?: number; daily?: number; weekly?: number; monthly?: number },
-): number {
+): { progress: number; info: GoalInfo | null } {
   const unlogged = Math.max(0, totalWords - (lastKnownTotal ?? 0))
   const today = todayISODate()
   const todayLogged = sumWritingLog(log, e => e.date === today)
@@ -33,11 +33,11 @@ function goalProgress(
   const weeklyWords = sumWritingLog(log, e => isThisWeek(e.date) && e.date !== today) + dailyWords
   const monthlyWords = sumWritingLog(log, e => isThisMonth(e.date) && e.date !== today) + dailyWords
 
-  if (goals.session && goals.session > 0) return Math.min(1, sessionWords / goals.session)
-  if (goals.daily && goals.daily > 0) return Math.min(1, dailyWords / goals.daily)
-  if (goals.weekly && goals.weekly > 0) return Math.min(1, weeklyWords / goals.weekly)
-  if (goals.monthly && goals.monthly > 0) return Math.min(1, monthlyWords / goals.monthly)
-  return -1
+  if (goals.session && goals.session > 0) return { progress: Math.min(1, sessionWords / goals.session), info: { label: 'Session goal', current: sessionWords, target: goals.session } }
+  if (goals.daily && goals.daily > 0) return { progress: Math.min(1, dailyWords / goals.daily), info: { label: 'Daily goal', current: dailyWords, target: goals.daily } }
+  if (goals.weekly && goals.weekly > 0) return { progress: Math.min(1, weeklyWords / goals.weekly), info: { label: 'Weekly goal', current: weeklyWords, target: goals.weekly } }
+  if (goals.monthly && goals.monthly > 0) return { progress: Math.min(1, monthlyWords / goals.monthly), info: { label: 'Monthly goal', current: monthlyWords, target: goals.monthly } }
+  return { progress: -1, info: null }
 }
 
 export default function EditorScreen() {
@@ -65,7 +65,7 @@ export default function EditorScreen() {
     .filter(([id]) => draftSectionIds.has(id))
     .reduce((acc, [, count]) => acc + count, 0)
   const sessionWords = Math.max(0, totalWords - sessionStartWords)
-  const goalPct = goalProgress(sessionWords, totalWords, writingLog.log, writingLog.lastKnownTotal, writingLog.goals)
+  const { progress: goalPct, info: goalInfo } = computeGoal(sessionWords, totalWords, writingLog.log, writingLog.lastKnownTotal, writingLog.goals)
 
   const font = project?.settings?.font ?? 'Inter, sans-serif'
   const fontSize = project?.settings?.fontSize ?? 16
@@ -236,6 +236,7 @@ export default function EditorScreen() {
             onExitFocus={() => setFocusMode(false)}
             totalWords={totalWords}
             goalProgress={goalPct}
+            goalInfo={goalInfo}
             searchOpen={searchOpen}
             onOpenSearch={() => setSearchOpen(true)}
             onCloseSearch={() => setSearchOpen(false)}

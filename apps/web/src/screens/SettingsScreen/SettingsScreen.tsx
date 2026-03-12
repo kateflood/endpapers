@@ -5,6 +5,9 @@ import type { ProjectSettings, ProjectType, AuthorInfo, AIBackend } from '@endpa
 import { FONTS, FONT_SIZES } from '../../components/RichTextEditor/EditorToolbar'
 import { PROJECT_TYPES } from '../../components/NewProjectDialog/NewProjectDialog'
 import { IconArrowLeft } from '../../components/icons'
+import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import ImportDialog from '../../components/ImportDialog/ImportDialog'
 import ExportDialog from '../../components/ExportDialog/ExportDialog'
 import BackupsDialog from '../../components/BackupsDialog/BackupsDialog'
@@ -394,11 +397,10 @@ function SettingRow({ label, description, checked, onChange }: SettingRowProps) 
         <div className="text-[0.9375rem] text-text">{label}</div>
         <div className="text-[0.8125rem] text-text-secondary mt-0.5">{description}</div>
       </div>
-      <input
-        type="checkbox"
-        className="w-4 h-4 cursor-pointer accent-accent shrink-0 ml-6"
+      <Switch
+        className="shrink-0 ml-6 data-[state=checked]:bg-accent"
         checked={checked}
-        onChange={e => onChange(e.target.checked)}
+        onCheckedChange={onChange}
       />
     </label>
   )
@@ -419,15 +421,16 @@ function SettingSelectRow({ label, description, value, options, onChange }: Sett
         <div className="text-[0.9375rem] text-text">{label}</div>
         <div className="text-[0.8125rem] text-text-secondary mt-0.5">{description}</div>
       </div>
-      <select
-        className="h-7 px-2 rounded-sm text-[0.8125rem] text-text bg-bg border border-border outline-none cursor-pointer focus:border-accent shrink-0 ml-6"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-      >
-        {options.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger size="sm" className="w-48 shrink-0 ml-6 focus-visible:border-accent focus-visible:ring-accent/20">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map(o => (
+            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   )
 }
@@ -451,8 +454,8 @@ function SettingTextRow({ label, description, value, placeholder, onSave }: Sett
         <div className="text-[0.9375rem] text-text">{label}</div>
         <div className="text-[0.8125rem] text-text-secondary mt-0.5">{description}</div>
       </div>
-      <input
-        className="h-7 px-2 rounded-sm text-[0.8125rem] text-text bg-bg border border-border outline-none focus:border-accent w-48 shrink-0"
+      <Input
+        className="w-48 shrink-0 h-7 text-[0.8125rem] focus-visible:border-accent focus-visible:ring-accent/20"
         value={draft}
         placeholder={placeholder}
         onChange={e => setDraft(e.target.value)}

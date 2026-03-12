@@ -141,7 +141,7 @@ export async function createBackup(
 
   const fileHandle = await backupsDir.getFileHandle(filename, { create: true })
   const writable = await fileHandle.createWritable()
-  await writable.write(zipped)
+  await writable.write((zipped.buffer as ArrayBuffer).slice(zipped.byteOffset, zipped.byteOffset + zipped.byteLength))
   await writable.close()
 
   // Write name if provided
