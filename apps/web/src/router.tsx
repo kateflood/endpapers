@@ -1,8 +1,8 @@
 import { createBrowserRouter } from 'react-router-dom'
-import HomeScreen from './screens/HomeScreen/HomeScreen'
-import EditorScreen from './screens/EditorScreen/EditorScreen'
-import SettingsScreen from './screens/SettingsScreen/SettingsScreen'
-import ReferenceScreen from './screens/ReferenceScreen/ReferenceScreen'
+import HomeScreen from './screens/HomeScreen'
+import EditorScreen from './screens/EditorScreen'
+import SettingsScreen from './screens/SettingsScreen'
+import ReferenceScreen from './screens/ReferenceScreen'
 
 const router = createBrowserRouter([
   { path: '/', element: <HomeScreen /> },
@@ -11,27 +11,27 @@ const router = createBrowserRouter([
   { path: '/reference', element: <ReferenceScreen /> },
   {
     path: '/help',
-    lazy: () => import('./screens/HelpScreen/HelpScreen').then(m => ({ Component: m.default })),
+    lazy: () => import('./screens/HelpScreen').then(m => ({ Component: m.default })),
   },
   {
     path: '/help/:topic',
-    lazy: () => import('./screens/HelpScreen/HelpScreen').then(m => ({ Component: m.default })),
+    lazy: () => import('./screens/HelpScreen').then(m => ({ Component: m.default })),
   },
   {
     path: '/about',
-    lazy: () => import('./screens/AboutScreen/AboutScreen').then(m => ({ Component: m.default })),
+    lazy: () => import('./screens/AboutScreen').then(m => ({ Component: m.default })),
   },
   {
     path: '/contact',
-    lazy: () => import('./screens/ContactScreen/ContactScreen').then(m => ({ Component: m.default })),
+    lazy: () => import('./screens/ContactScreen').then(m => ({ Component: m.default })),
   },
   {
     path: '/ai',
-    lazy: () => import('./screens/AIScreen/AIScreen').then(m => ({ Component: m.default })),
+    lazy: () => import('./screens/AIScreen').then(m => ({ Component: m.default })),
   },
   {
     path: '/pricing',
-    lazy: () => import('./screens/PricingScreen/PricingScreen').then(m => ({ Component: m.default })),
+    lazy: () => import('./screens/PricingScreen').then(m => ({ Component: m.default })),
   },
 ])
 

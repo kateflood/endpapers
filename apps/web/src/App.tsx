@@ -1,7 +1,7 @@
 import { RouterProvider } from 'react-router-dom'
 import { ProjectProvider } from './contexts/ProjectContext'
 import { ToastProvider } from './contexts/ToastContext'
-import ErrorBoundary from './components/ErrorBoundary'
+import ErrorBoundary from './components/shared/ErrorBoundary'
 import router from './router'
 
 export default function App() {
