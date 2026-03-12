@@ -5,6 +5,8 @@ import { removeRecent, touchRecent } from '../../db/recents'
 import { requestPermissionForHandle, readProjectJson, readWritingLog } from '../../fs/projectFs'
 import { useProject } from '../../contexts/ProjectContext'
 import { IconFileText, IconClose } from '../icons'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 interface Props {
   recents: RecentProject[]
@@ -48,8 +50,8 @@ export default function RecentProjectsList({ recents, onRecentsChanged }: Props)
     <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3.5">
       {recents.map(item => (
         <div key={item.id} className="group relative">
-          <div
-            className="bg-surface border border-border rounded-xl p-5 cursor-pointer transition-all hover:border-accent/40 hover:shadow-[0_4px_16px_rgba(43,108,176,0.1)] hover:-translate-y-0.5 flex flex-col gap-2.5"
+          <Card
+            className="p-5 gap-2.5 cursor-pointer transition-all hover:shadow-[0_4px_16px_rgba(43,108,176,0.1)] hover:-translate-y-0.5 hover:ring-accent/40"
             onClick={() => { void handleOpen(item) }}
           >
             <div className="w-[38px] h-[38px] rounded-lg bg-accent/10 flex items-center justify-center">
@@ -59,14 +61,16 @@ export default function RecentProjectsList({ recents, onRecentsChanged }: Props)
               <div className="text-[0.875rem] font-semibold text-text truncate">{item.title}</div>
               <div className="text-[0.75rem] text-text-placeholder mt-0.5">{formatDate(item.lastOpened)}</div>
             </div>
-          </div>
-          <button
-            className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-sm text-text-placeholder hover:text-text hover:bg-hover transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+          </Card>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-text-placeholder hover:text-text"
             onClick={e => { e.stopPropagation(); void handleRemove(item.id) }}
             aria-label="Remove from recents"
           >
             <IconClose size={14} />
-          </button>
+          </Button>
           {itemErrors[item.id] && (
             <div className="text-[0.75rem] text-red-500 mt-1 px-1">
               {itemErrors[item.id]}

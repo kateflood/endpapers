@@ -19,6 +19,8 @@ import RecentProjectsList from '../../components/RecentProjectsList/RecentProjec
 import FeatureShowcase from '../../components/FeatureShowcase/FeatureShowcase'
 import { IconPlus, IconFolderOpen, IconShield, IconCheckCircle, IconArrowRight, IconSparkles } from '../../components/icons'
 import { logoFullWhite } from '@endpapers/assets'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 export default function HomeScreen() {
   const navigate = useNavigate()
@@ -119,9 +121,12 @@ export default function HomeScreen() {
           <a href="#features" className="text-[0.8125rem] text-white/65 hover:text-white no-underline transition-colors">
             Features
           </a>
-          <a href="#pricing" className="text-[0.8125rem] text-white/65 hover:text-white no-underline transition-colors">
+          <button
+            className="text-[0.8125rem] text-white/65 hover:text-white transition-colors cursor-pointer"
+            onClick={() => navigate('/pricing')}
+          >
             Pricing
-          </a>
+          </button>
           <button
             className="text-[0.8125rem] text-white/65 hover:text-white transition-colors cursor-pointer"
             onClick={() => navigate('/help')}
@@ -132,8 +137,25 @@ export default function HomeScreen() {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="dark-hero relative overflow-hidden px-6 pt-20 pb-16 text-center animate-in animate-in-1">
-        {/* Radial glow */}
+      <section className="dark-hero relative overflow-hidden px-6 pt-16 pb-14 text-center animate-in animate-in-1 shadow-[0_6px_24px_rgba(0,0,0,0.18)]">
+        {/* Repeating logo mark pattern */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <pattern id="hero-book-pattern" x="0" y="0" width="110" height="110" patternUnits="userSpaceOnUse" patternTransform="rotate(-15 0 0)">
+              <g transform="translate(28, 25) scale(0.52)" opacity="0.07">
+                <path d="M0 5 Q0 0 5 0 L45 0 L45 80 Q22.5 92 0 80 Z" fill="white"/>
+                <path d="M55 0 L95 0 Q100 0 100 5 L100 80 Q77.5 92 55 80 L55 0 Z" fill="white"/>
+                <line x1="50" y1="2" x2="50" y2="80" stroke="white" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M50 13 Q41 18 50 23" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                <path d="M50 30 Q59 35 50 40" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                <path d="M50 47 Q41 52 50 57" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                <path d="M50 64 Q59 69 50 74" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+              </g>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#hero-book-pattern)"/>
+        </svg>
+        {/* Radial glow (sits over pattern, dims center so text reads cleanly) */}
         <div className="dark-hero-glow absolute inset-0 pointer-events-none" />
 
         <div className="relative z-10 flex flex-col items-center">
@@ -160,36 +182,38 @@ export default function HomeScreen() {
           <div className="flex gap-3.5 flex-wrap justify-center">
             {supported ? (
               <>
-                <button
-                  className="btn-cta inline-flex items-center gap-2 rounded-[10px] px-7 py-3.5 text-[0.9375rem] font-medium text-white cursor-pointer transition-all hover:-translate-y-px disabled:opacity-40 disabled:cursor-not-allowed"
+                <Button
+                  className="btn-cta h-auto rounded-[10px] px-7 py-3.5 text-[0.9375rem] font-medium text-white border-0 hover:-translate-y-px disabled:opacity-40"
                   onClick={() => setShowDialog(true)}
                   disabled={isBusy}
                 >
                   <IconPlus size={16} />
                   New Project
-                </button>
-                <button
-                  className="inline-flex items-center gap-2 rounded-[10px] px-7 py-3.5 text-[0.9375rem] font-medium text-white cursor-pointer transition-all hover:-translate-y-px disabled:opacity-40 disabled:cursor-not-allowed bg-white/8 border border-white/18"
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto rounded-[10px] px-7 py-3.5 text-[0.9375rem] font-medium text-white bg-white/8 border-white/18 hover:bg-white/15 hover:text-white hover:-translate-y-px disabled:opacity-40"
                   onClick={() => { void handleOpenProject() }}
                   disabled={isBusy}
                 >
                   <IconFolderOpen size={16} />
                   Open Existing
-                </button>
+                </Button>
               </>
             ) : (
               <p className="text-[0.8125rem] text-center text-white/50">
                 Endpapers requires Chrome or Edge for local file access.
               </p>
             )}
-           </div>
-            <div className="flex gap-3.5 flex-wrap justify-center mt-5">
-              <button
-                className="inline-flex items-center gap-2 rounded-[10px] px-7 py-3.5 text-[0.9375rem] font-medium text-white cursor-pointer transition-all hover:-translate-y-px bg-white/8 border border-white/18"
-                onClick={() => { openDemoProject(); navigate('/editor') }}
-              >
-                Try the Demo
-              </button>
+          </div>
+          <div className="flex gap-3.5 flex-wrap justify-center mt-5">
+            <Button
+              variant="outline"
+              className="h-auto rounded-[10px] px-7 py-3.5 text-[0.9375rem] font-medium text-white bg-white/8 border-white/18 hover:bg-white/15 hover:text-white hover:-translate-y-px"
+              onClick={() => { openDemoProject(); navigate('/editor') }}
+            >
+              Try the Demo
+            </Button>
           </div>
 
           {error && (
@@ -225,106 +249,32 @@ export default function HomeScreen() {
           <FeatureShowcase />
         </div>
 
-        {/* Pricing */}
-        <div id="pricing" className="scroll-mt-[76px] mb-14">
-          <p className="text-[0.8125rem] font-semibold tracking-[1.5px] uppercase text-text-secondary mb-5">
-            Pricing
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {/* Free tier */}
-            <div className="bg-surface border border-border rounded-[14px] p-7 flex flex-col">
-              <p className="text-[0.75rem] font-semibold tracking-wider uppercase text-accent mb-2">Free</p>
-              <div className="flex items-baseline gap-1 mb-3">
-                <span className="text-3xl font-semibold text-text">$0</span>
-                <span className="text-[0.875rem] text-text-secondary">/ forever</span>
-              </div>
-              <p className="text-[0.875rem] text-text-secondary leading-relaxed mb-6">
-                Everything you need to write, organize, and export your work. No account required.
-              </p>
-              <ul className="space-y-2.5 mb-8 flex-1">
-                {[
-                  'Unlimited projects',
-                  'Distraction-free editor',
-                  'Sections, groups & drag-and-drop',
-                  'Reference board',
-                  'Writing goals & statistics',
-                  'Export to PDF and plain text',
-                  'Fully offline — no internet required',
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2.5 text-[0.875rem] text-text-secondary">
-                    <IconCheckCircle size={16} className="text-accent shrink-0 mt-0.5" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <button
-                className="btn-cta w-full rounded-[10px] px-6 py-3 text-[0.9375rem] font-medium text-white cursor-pointer transition-all hover:-translate-y-px"
-                onClick={() => setShowDialog(true)}
-              >
-                Get Started
-              </button>
-            </div>
-
-            {/* Premium tier */}
-            <div className="relative bg-surface border border-border rounded-[14px] p-7 flex flex-col overflow-hidden">
-              <div className="absolute top-4 right-4 rounded-full px-3 py-0.5 text-[0.6875rem] font-semibold tracking-wide uppercase bg-[#EBF8FF] text-accent">
-                Coming soon
-              </div>
-              <p className="text-[0.75rem] font-semibold tracking-wider uppercase text-text-secondary mb-2">Premium</p>
-              <div className="flex items-baseline gap-1 mb-3">
-                <span className="text-3xl font-semibold text-text">TBD</span>
-              </div>
-              <p className="text-[0.875rem] text-text-secondary leading-relaxed mb-6">
-                Advanced tools for serious writers. Cloud sync, version history, and on device AI-powered editing.
-              </p>
-              <ul className="space-y-2.5 mb-8 flex-1">
-                {[
-                  'Everything in Free',
-                  'Cloud sync via Google Drive',
-                  'Version history with named snapshots',
-                  'AI-powered change summaries',
-                  'ePub export',
-                  'AI editor & reviewer agents',
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2.5 text-[0.875rem] text-text-placeholder">
-                    <IconCheckCircle size={16} className="text-text-placeholder shrink-0 mt-0.5" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <button
-                className="w-full rounded-[10px] px-6 py-3 text-[0.9375rem] font-medium cursor-default opacity-50 bg-border text-text-secondary"
-                disabled
-              >
-                Coming Soon
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* AI Tools */}
         <div className="mb-14">
-          <div className="bg-surface border border-border rounded-[14px] p-7 flex flex-col sm:flex-row items-start gap-5">
-            <div className="w-12 h-12 rounded-2xl bg-accent/[0.08] flex items-center justify-center shrink-0">
-              <IconSparkles size={22} className="text-accent" />
-            </div>
-            <div>
-              <h3 className="text-[1.0625rem] font-semibold text-text mb-1.5">A word about AI</h3>
-              <p className="text-[0.875rem] text-text-secondary leading-relaxed mb-3">
-                We believe in privacy and protecting your IP but we also believe you should have access to the tools 
-                and technology that AI can support - which is why we support private, on device AI.
-                Proofread your spelling and grammar, summarize sections, and more — all using
-                AI models that run entirely on your device. Your text never leaves your machine.
-              </p>
-              <button
-                className="text-[0.875rem] text-accent hover:underline cursor-pointer transition-colors flex items-center gap-1"
-                onClick={() => navigate('/ai')}
-              >
-                Learn more
-                <IconArrowRight size={14} />
-              </button>
-            </div>
-          </div>
+          <Card className="p-7 gap-0">
+            <CardContent className="p-0 flex flex-col sm:flex-row items-start gap-5">
+              <div className="w-12 h-12 rounded-2xl bg-accent/[0.08] flex items-center justify-center shrink-0">
+                <IconSparkles size={22} className="text-accent" />
+              </div>
+              <div>
+                <h3 className="text-[1.0625rem] font-semibold text-text mb-1.5">A word about AI</h3>
+                <p className="text-[0.875rem] text-text-secondary leading-relaxed mb-3">
+                  We believe in privacy and protecting your IP but we also believe you should have access to the tools
+                  and technology that AI can support - which is why we support private, on device AI.
+                  Proofread your spelling and grammar, summarize sections, and more — all using
+                  AI models that run entirely on your device. Your text never leaves your machine.
+                </p>
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-accent text-[0.875rem] gap-1"
+                  onClick={() => navigate('/ai')}
+                >
+                  Learn more
+                  <IconArrowRight size={14} />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Privacy banner */}
@@ -377,7 +327,7 @@ export default function HomeScreen() {
               </h4>
               <div className="flex flex-col gap-2.5">
                 <FooterLink href="#features">Features</FooterLink>
-                <FooterLink href="#pricing">Pricing</FooterLink>
+                <FooterLink onClick={() => navigate('/pricing')}>Pricing</FooterLink>
                 <FooterLink onClick={() => navigate('/help')}>Docs</FooterLink>
                 <FooterLink onClick={() => navigate('/ai')}>AI Tools</FooterLink>
               </div>

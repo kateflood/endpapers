@@ -1,10 +1,10 @@
 <!-- ╔══════════════════════════════════════════╗ -->
-<!-- ║  endpapers-icon-512.svg                  ║ -->
-<!-- ║  Use: App Store, Electron dock, PWA      ║ -->
+<!-- ║  endpapers-icon-dark-64.svg              ║ -->
+<!-- ║  Use: app icon, favicon base             ║ -->
 <!-- ╚══════════════════════════════════════════╝ -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="112" fill="#1a1a1a"/>
-  <g transform="translate(104,116) scale(3.04)">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#1a1a1a"/>
+  <g transform="translate(13,14.5) scale(0.38)">
     <path d="M0 5 Q0 0 5 0 L45 0 L45 80 Q22.5 92 0 80 Z" fill="white"/>
     <path d="M55 0 L95 0 Q100 0 100 5 L100 80 Q77.5 92 55 80 L55 0 Z" fill="white"/>
     <line x1="50" y1="2" x2="50" y2="80" stroke="#1B3A6B" stroke-width="3" stroke-linecap="round"/>

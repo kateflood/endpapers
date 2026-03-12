@@ -29,6 +29,10 @@ const router = createBrowserRouter([
     path: '/ai',
     lazy: () => import('./screens/AIScreen/AIScreen').then(m => ({ Component: m.default })),
   },
+  {
+    path: '/pricing',
+    lazy: () => import('./screens/PricingScreen/PricingScreen').then(m => ({ Component: m.default })),
+  },
 ])
 
 export default router

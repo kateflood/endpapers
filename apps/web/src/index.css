@@ -1,25 +1,25 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/lora";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --color-bg: #F7FAFC;
+  --color-bg: #F7F5F0;
   --color-surface: #ffffff;
   --color-text: #2D3748;
   --color-text-secondary: #718096;
   --color-text-placeholder: #A0AEC0;
   --color-border: #E2E8F0;
-  --color-accent: #2B6CB0;
+  --color-accent: #B45309;
   --color-hover: rgba(0, 0, 0, 0.04);
   --color-active: rgba(0, 0, 0, 0.07);
   --color-danger: #dc2626;
   --color-danger-surface: #fef2f2;
   --color-danger-border: #fecaca;
   --color-navy: #1A365D;
-  --font-serif: 'Georgia', 'Times New Roman', serif;
+  --font-serif: 'Lora Variable', 'Georgia', serif;
   --radius-sm: 4px;
   --radius-md: 8px;
 }
@@ -57,7 +57,7 @@
 .ProseMirror em { font-style: italic; }
 .search-match { background-color: #ffeb3b; border-radius: 2px; }
 .search-current { background-color: #ffa724; border-radius: 2px; }
-.ai-highlight { background-color: rgba(43, 108, 176, 0.2); border-radius: 2px; }
+.ai-highlight { background-color: rgba(180, 83, 9, 0.15); border-radius: 2px; }
 .ai-highlight-caret {
   display: inline-block;
   width: 2px;
@@ -98,7 +98,7 @@
 .dark-hero { background: linear-gradient(160deg, #1A365D 0%, #1e4a7a 60%, #1a3a6a 100%); }
 .dark-hero-glow { background: radial-gradient(ellipse at 50% 0%, rgba(66, 153, 225, 0.15) 0%, transparent 70%); }
 .dark-privacy { background: linear-gradient(135deg, #1A365D 0%, #1e4a7a 100%); }
-.btn-cta { background: #4299E1; box-shadow: 0 4px 20px rgba(66, 153, 225, 0.35); }
+.btn-cta { background: #B45309; box-shadow: 0 4px 20px rgba(180, 83, 9, 0.35); }
 
 /* Focus mode exit button — fades in/out with mouse activity */
 .focus-exit-btn {
@@ -117,7 +117,7 @@
   --color-text-secondary: #8e9297;
   --color-text-placeholder: #5c6066;
   --color-border: #36393f;
-  --color-accent: #5b9bd5;
+  --color-accent: #D97706;
   --color-hover: rgba(255, 255, 255, 0.07);
   --color-active: rgba(255, 255, 255, 0.12);
   --color-danger: #f87171;
@@ -197,7 +197,7 @@
 @theme inline {
   /* shadcn color tokens — use bg-background, text-foreground, etc. in shadcn components */
   /* Our app tokens (bg-bg, bg-surface, bg-accent, text-text, etc.) are defined in @theme above */
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-sans: 'Lora Variable', serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
