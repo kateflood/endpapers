@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { IconArrowLeft } from '../../components/icons'
+import { logoFullWhite } from '@endpapers/assets'
 import HelpSidebar from './HelpSidebar'
 import GettingStarted from './topics/GettingStarted'
 import KeyboardShortcuts from './topics/KeyboardShortcuts'
@@ -29,16 +30,19 @@ export default function HelpScreen() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <header className="flex items-center px-4 h-12 border-b border-border bg-surface shrink-0 gap-3">
+      <nav className="dark-nav sticky top-0 z-50 h-[60px] flex items-center justify-between px-6 sm:px-10 border-b border-white/7 shrink-0">
         <button
-          className="w-8 h-8 flex items-center justify-center rounded-sm text-text-secondary hover:text-text hover:bg-hover transition-colors cursor-pointer"
+          className="flex items-center gap-2 text-[0.8125rem] text-white/65 hover:text-white cursor-pointer transition-colors"
           onClick={() => navigate('/')}
-          aria-label="Back to home"
         >
           <IconArrowLeft size={16} />
+          Back
         </button>
-        <span className="text-[0.9375rem] font-medium text-text">Help</span>
-      </header>
+        <a href="/" className="flex items-center gap-3 no-underline">
+          <img src={logoFullWhite} alt="Endpapers" className="h-7" />
+        </a>
+        <div className="w-[60px]" />
+      </nav>
 
       <div className="flex-1 flex overflow-hidden">
         <HelpSidebar activeTopic={active} />

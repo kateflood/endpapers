@@ -1,14 +1,14 @@
 import { useNavigate } from 'react-router-dom'
 import { IconArrowLeft } from '../../components/icons'
-import { logoFull } from '@endpapers/assets'
+import { logoFullWhite } from '@endpapers/assets'
 
 export default function AboutScreen() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-bg">
-      {/* Header */}
-      <header className="dark-nav sticky top-0 z-50 h-[60px] flex items-center px-6 sm:px-10 border-b border-white/7">
+    <div className="min-h-screen bg-bg flex flex-col">
+
+      <nav className="dark-nav sticky top-0 z-50 h-[60px] flex items-center justify-between px-6 sm:px-10 border-b border-white/7">
         <button
           className="flex items-center gap-2 text-[0.8125rem] text-white/65 hover:text-white cursor-pointer transition-colors"
           onClick={() => navigate('/')}
@@ -16,11 +16,13 @@ export default function AboutScreen() {
           <IconArrowLeft size={16} />
           Back
         </button>
-      </header>
+        <a href="/" className="flex items-center gap-3 no-underline">
+          <img src={logoFullWhite} alt="Endpapers" className="h-7" />
+        </a>
+        <div className="w-[60px]" />
+      </nav>
 
-      <main className="max-w-[640px] mx-auto px-6 sm:px-10 py-16">
-        <img src={logoFull} alt="Endpapers" className="h-10 mb-8" />
-
+      <main className="flex-1 max-w-[640px] mx-auto w-full px-6 sm:px-10 py-16">
         <h1 className="text-2xl font-semibold text-text mb-4">About Endpapers</h1>
 
         <div className="space-y-4 text-[0.9375rem] text-text-secondary leading-relaxed">
@@ -51,6 +53,16 @@ export default function AboutScreen() {
           </ul>
         </div>
       </main>
+
+      <footer className="py-10 px-6 sm:px-10 bg-navy border-t border-white/7 mt-auto">
+        <div className="max-w-[640px] mx-auto flex items-center justify-between flex-wrap gap-4">
+          <img src={logoFullWhite} alt="Endpapers" className="h-6" />
+          <p className="text-[0.75rem] text-white/30">
+            &copy; {new Date().getFullYear()} Endpapers. All rights reserved.
+          </p>
+        </div>
+      </footer>
+
     </div>
   )
 }
