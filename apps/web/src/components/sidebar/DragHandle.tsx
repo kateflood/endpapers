@@ -10,7 +10,7 @@ interface Props {
 export default function DragHandle({ attributes, listeners }: Props) {
   return (
     <span
-      className="shrink-0 w-4 h-4 flex items-center justify-center text-text-placeholder opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing touch-none"
+      className="shrink-0 w-4 h-4 flex items-center justify-center text-text-placeholder opacity-0 group-hover/item:opacity-100 cursor-grab active:cursor-grabbing touch-none"
       {...attributes}
       {...listeners}
       onClick={e => e.stopPropagation()}

@@ -1,13 +1,19 @@
 import { useRef } from 'react'
 import type { Editor } from '@tiptap/core'
-import FloatingBar from '../shared/FloatingBar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Separator } from '@/components/ui/separator'
 import {
   IconUndo, IconRedo,
   IconH1, IconH2, IconH3,
   IconBold, IconItalic, IconUnderline, IconStrike, IconHighlight, IconCode,
   IconBulletList, IconOrderedList, IconBlockquote,
   IconAlignLeft, IconAlignCenter, IconAlignRight,
-  IconImage, IconSearch, IconDownload,
+  IconImage, IconSearch, IconDownload, IconType,
 } from '../shared/icons'
 
 export const FONTS = [
@@ -49,7 +55,7 @@ export default function EditorToolbar({
   const btnActive = 'bg-active text-text'
   const btnInactive = 'text-text-secondary hover:bg-hover hover:text-text'
   const selectClass = 'h-7 px-1.5 rounded-sm text-[0.875rem] text-text bg-transparent border-none outline-none cursor-pointer hover:bg-hover transition-colors shrink-0'
-  const sep = <div className="w-px h-4 bg-border mx-1 shrink-0" />
+  const sep = <Separator orientation="vertical" className="h-4 mx-1 shrink-0 self-center" />
 
   function iconBtn(icon: React.ReactNode, isActive: boolean, onClick: () => void, tooltip: string) {
     return (
@@ -75,10 +81,48 @@ export default function EditorToolbar({
     e.target.value = ''
   }
 
-  return (
-    <FloatingBar className="flex items-center px-3 h-10 gap-0.5 overflow-x-auto">
+  // Determine active heading icon for trigger
+  function activeHeadingIcon() {
+    if (!editor) return <IconType size={ICON_SIZE} />
+    if (editor.isActive('heading', { level: 1 })) return <IconH1 size={ICON_SIZE} />
+    if (editor.isActive('heading', { level: 2 })) return <IconH2 size={ICON_SIZE} />
+    if (editor.isActive('heading', { level: 3 })) return <IconH3 size={ICON_SIZE} />
+    return <IconType size={ICON_SIZE} />
+  }
 
-      {/* Formatting tools — only shown when editor is active */}
+  // Determine active list icon for trigger
+  function activeListIcon() {
+    if (!editor) return <IconBulletList size={ICON_SIZE} />
+    if (editor.isActive('orderedList')) return <IconOrderedList size={ICON_SIZE} />
+    if (editor.isActive('blockquote')) return <IconBlockquote size={ICON_SIZE} />
+    return <IconBulletList size={ICON_SIZE} />
+  }
+
+  // Determine active alignment icon for trigger
+  function activeAlignIcon() {
+    if (!editor) return <IconAlignLeft size={ICON_SIZE} />
+    if (editor.isActive({ textAlign: 'center' })) return <IconAlignCenter size={ICON_SIZE} />
+    if (editor.isActive({ textAlign: 'right' })) return <IconAlignRight size={ICON_SIZE} />
+    return <IconAlignLeft size={ICON_SIZE} />
+  }
+
+  const isHeadingActive = editor
+    ? editor.isActive('heading', { level: 1 }) || editor.isActive('heading', { level: 2 }) || editor.isActive('heading', { level: 3 })
+    : false
+  const isListActive = editor
+    ? editor.isActive('bulletList') || editor.isActive('orderedList') || editor.isActive('blockquote')
+    : false
+  const isAlignActive = editor
+    ? editor.isActive({ textAlign: 'center' }) || editor.isActive({ textAlign: 'right' })
+    : false
+
+  const dropdownTriggerClass = `${btnBase} ${isHeadingActive ? btnActive : btnInactive}`
+  const listTriggerClass = `${btnBase} ${isListActive ? btnActive : btnInactive}`
+  const alignTriggerClass = `${btnBase} ${isAlignActive ? btnActive : btnInactive}`
+
+  return (
+    <div className="flex items-center gap-0.5 overflow-x-auto flex-1 scrollbar-none">
+
       {editor && (
         <>
           {/* Font family + size */}
@@ -111,16 +155,29 @@ export default function EditorToolbar({
 
           {sep}
 
-          {/* Undo / Redo */}
-          {iconBtn(<IconUndo size={ICON_SIZE} />, false, () => editor.chain().focus().undo().run(), 'Undo')}
-          {iconBtn(<IconRedo size={ICON_SIZE} />, false, () => editor.chain().focus().redo().run(), 'Redo')}
 
-          {sep}
-
-          {/* Headings */}
-          {iconBtn(<IconH1 size={ICON_SIZE} />, editor.isActive('heading', { level: 1 }), () => editor.chain().focus().toggleHeading({ level: 1 }).run(), 'Heading 1')}
-          {iconBtn(<IconH2 size={ICON_SIZE} />, editor.isActive('heading', { level: 2 }), () => editor.chain().focus().toggleHeading({ level: 2 }).run(), 'Heading 2')}
-          {iconBtn(<IconH3 size={ICON_SIZE} />, editor.isActive('heading', { level: 3 }), () => editor.chain().focus().toggleHeading({ level: 3 }).run(), 'Heading 3')}
+          {/* Heading dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" title="Heading style" className={dropdownTriggerClass}>
+                {activeHeadingIcon()}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[140px]">
+              <DropdownMenuItem onClick={() => editor.chain().focus().setParagraph().run()}>
+                <IconType size={13} className="mr-2" /> Paragraph
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
+                <IconH1 size={13} className="mr-2" /> Heading 1
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
+                <IconH2 size={13} className="mr-2" /> Heading 2
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
+                <IconH3 size={13} className="mr-2" /> Heading 3
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {sep}
 
@@ -134,17 +191,47 @@ export default function EditorToolbar({
 
           {sep}
 
-          {/* Lists + blockquote */}
-          {iconBtn(<IconBulletList size={ICON_SIZE} />, editor.isActive('bulletList'), () => editor.chain().focus().toggleBulletList().run(), 'Bullet list')}
-          {iconBtn(<IconOrderedList size={ICON_SIZE} />, editor.isActive('orderedList'), () => editor.chain().focus().toggleOrderedList().run(), 'Ordered list')}
-          {iconBtn(<IconBlockquote size={ICON_SIZE} />, editor.isActive('blockquote'), () => editor.chain().focus().toggleBlockquote().run(), 'Blockquote')}
+          {/* Lists + blockquote dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" title="Lists" className={listTriggerClass}>
+                {activeListIcon()}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[150px]">
+              <DropdownMenuItem onClick={() => editor.chain().focus().toggleBulletList().run()}>
+                <IconBulletList size={13} className="mr-2" /> Bullet List
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+                <IconOrderedList size={13} className="mr-2" /> Numbered List
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+                <IconBlockquote size={13} className="mr-2" /> Blockquote
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {sep}
 
-          {/* Text alignment */}
-          {iconBtn(<IconAlignLeft size={ICON_SIZE} />, editor.isActive({ textAlign: 'left' }), () => editor.chain().focus().setTextAlign('left').run(), 'Align left')}
-          {iconBtn(<IconAlignCenter size={ICON_SIZE} />, editor.isActive({ textAlign: 'center' }), () => editor.chain().focus().setTextAlign('center').run(), 'Align center')}
-          {iconBtn(<IconAlignRight size={ICON_SIZE} />, editor.isActive({ textAlign: 'right' }), () => editor.chain().focus().setTextAlign('right').run(), 'Align right')}
+          {/* Alignment dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" title="Text alignment" className={alignTriggerClass}>
+                {activeAlignIcon()}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[130px]">
+              <DropdownMenuItem onClick={() => editor.chain().focus().setTextAlign('left').run()}>
+                <IconAlignLeft size={13} className="mr-2" /> Left
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => editor.chain().focus().setTextAlign('center').run()}>
+                <IconAlignCenter size={13} className="mr-2" /> Center
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => editor.chain().focus().setTextAlign('right').run()}>
+                <IconAlignRight size={13} className="mr-2" /> Right
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {sep}
 
@@ -154,12 +241,17 @@ export default function EditorToolbar({
 
           {sep}
 
+          {/* Undo / Redo */}
+          {iconBtn(<IconUndo size={ICON_SIZE} />, false, () => editor.chain().focus().undo().run(), 'Undo')}
+          {iconBtn(<IconRedo size={ICON_SIZE} />, false, () => editor.chain().focus().redo().run(), 'Redo')}
+
+          {sep}
+
           {/* Search + Export */}
           {iconBtn(<IconSearch size={ICON_SIZE} />, searchActive, onSearch, 'Search & replace')}
           {iconBtn(<IconDownload size={ICON_SIZE} />, false, onExport, 'Export section')}
         </>
       )}
-
-    </FloatingBar>
+    </div>
   )
 }

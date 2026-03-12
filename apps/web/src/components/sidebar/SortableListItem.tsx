@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { cn } from '@/lib/utils'
 import type { RowMenuItem } from './RowMenu'
 import DragHandle from './DragHandle'
 import RowMenu from './RowMenu'
@@ -100,13 +101,15 @@ export default function SortableListItem({
   return (
     <div ref={setNodeRef} style={style}>
       <div
-        className={`group relative flex items-center h-7 gap-1 ${paddingLeft} pr-2 cursor-pointer select-none text-[0.8125rem] ${
+        className={cn(
+          'group/item relative flex items-center h-7 gap-1 pr-2 cursor-pointer select-none text-[0.8125rem]',
+          paddingLeft,
           isActive
             ? 'text-text font-medium'
             : dimWhenInactive
               ? 'text-text-secondary hover:bg-hover hover:text-text'
-              : 'text-text hover:bg-hover'
-        }`}
+              : 'text-text hover:bg-hover',
+        )}
         onClick={() => { if (!editing) onSelect(id) }}
         onDoubleClick={onInlineRename ? () => startEditing() : undefined}
       >

@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { EditorContent } from '@tiptap/react'
 import type { Editor } from '@tiptap/core'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
@@ -137,6 +138,48 @@ function GoalRing({ progress, goalInfo }: { progress: number; goalInfo: GoalInfo
   )
 }
 
+function FooterStats({
+  sectionWords,
+  totalWords,
+  wordsPerPage,
+  goalProgress,
+  goalInfo,
+}: {
+  sectionWords: number
+  totalWords: number
+  wordsPerPage: number
+  goalProgress: number
+  goalInfo: GoalInfo | null
+}) {
+  const sectionPages = estimatePages(sectionWords, wordsPerPage)
+  const totalPages = estimatePages(totalWords, wordsPerPage)
+  const readMin = Math.max(1, Math.ceil(totalWords / 200))
+
+  return (
+    <FloatingBar className="flex items-center ml-auto mr-3 mb-3 px-4 h-8 w-fit gap-4 text-[0.75rem] text-text-secondary">
+      <span><strong className="font-medium text-text-secondary">{sectionWords.toLocaleString()}</strong> words</span>
+      <span><strong className="font-medium text-text-secondary">~{sectionPages}</strong> {sectionPages === 1 ? 'pg' : 'pgs'}</span>
+      <div className="w-px h-3.5 bg-border" />
+      <span><strong className="font-medium text-text-secondary">{totalWords.toLocaleString()}</strong> total</span>
+      <span><strong className="font-medium text-text-secondary">~{totalPages}</strong> {totalPages === 1 ? 'pg' : 'pgs'}</span>
+      <div className="w-px h-3.5 bg-border" />
+      <span className="flex items-center gap-1">
+        <IconClock size={11} />
+        <strong className="font-medium text-text-secondary">~{readMin} min</strong> read
+      </span>
+      {goalProgress >= 0 && (
+        <>
+          <div className="w-px h-3.5 bg-border" />
+          <span className="flex items-center gap-1.5">
+            <GoalRing progress={goalProgress} goalInfo={goalInfo} />
+            <strong className="font-medium text-text-secondary">{Math.round(goalProgress * 100)}%</strong> goal
+          </span>
+        </>
+      )}
+    </FloatingBar>
+  )
+}
+
 const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(function RichTextEditor({
   editor,
   focusMode = false,
@@ -152,6 +195,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
 }, ref) {
   const { project, handle, activeSectionId, sectionWordCounts, updateSectionWordCount } = useProject()
   const { showToast } = useToast()
+  const isMobile = useIsMobile()
   const settings: ProjectSettings = { ...DEFAULTS, ...project?.settings }
   const font = settings.font
   const fontSize = settings.fontSize
@@ -282,11 +326,11 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
         editor.commands.setContent(html || '')
         editor.commands.focus('start')
         const text = editor.getText()
-        updateSectionWordCount(activeSectionId, countWords(text))
+        updateWordCountRef.current(activeSectionId, countWords(text))
       })
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [activeSectionId, handle, project, editor])
+  }, [activeSectionId, handle, project, editor, showToast])
 
   // Flush save on unmount
   useEffect(() => {
@@ -322,18 +366,20 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
         <SearchBar editor={editor} onClose={closeSearch} />
       )}
 
-      <div className={`flex-1 overflow-y-auto${settings.paperMode && !focusMode ? ' bg-surface py-10 px-6' : ''}`}>
-        {loading ? (
+      <div className={`flex-1 overflow-y-auto scrollbar-none${settings.paperMode && !focusMode && !isMobile ? ' bg-surface py-10 px-6' : ''}`}>
+        {loading && (
           <div className="flex items-center justify-center h-full">
             <p className="text-[0.9375rem] text-text-placeholder">Loading…</p>
           </div>
-        ) : !activeSectionId ? (
+        )}
+        {!loading && !activeSectionId && (
           <div className="flex items-center justify-center h-full">
             <p className="text-[0.9375rem] text-text-placeholder">Select a section to start writing.</p>
           </div>
-        ) : (
+        )}
+        {!loading && activeSectionId && (
           <div
-            className={settings.paperMode && !focusMode
+            className={settings.paperMode && !focusMode && !isMobile
               ? 'max-w-[680px] mx-auto bg-surface shadow-[0_2px_12px_rgba(0,0,0,0.08)] px-16 pt-16 pb-24 min-h-[900px]'
               : 'max-w-[680px] mx-auto px-12 py-10 min-h-full'
             }
@@ -345,51 +391,29 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
         )}
       </div>
 
-      {!focusMode && activeSectionId && !loading && (() => {
-        const sectionWords = sectionWordCounts[activeSectionId] ?? 0
-        const wpp = settings.wordsPerPage
-        const sectionPages = estimatePages(sectionWords, wpp)
-        const totalPages = estimatePages(totalWords, wpp)
-        const readMin = Math.max(1, Math.ceil(totalWords / 200))
-        return (
-          <FloatingBar className="flex items-center ml-auto mr-3 mb-3 px-4 h-8 w-fit gap-4 text-[0.75rem] text-text-secondary">
-            <span><strong className="font-medium text-text-secondary">{sectionWords.toLocaleString()}</strong> words</span>
-            <span><strong className="font-medium text-text-secondary">~{sectionPages}</strong> {sectionPages === 1 ? 'pg' : 'pgs'}</span>
-            <div className="w-px h-3.5 bg-border" />
-            <span><strong className="font-medium text-text-secondary">{totalWords.toLocaleString()}</strong> total</span>
-            <span><strong className="font-medium text-text-secondary">~{totalPages}</strong> {totalPages === 1 ? 'pg' : 'pgs'}</span>
-            <div className="w-px h-3.5 bg-border" />
-            <span className="flex items-center gap-1">
-              <IconClock size={11} />
-              <strong className="font-medium text-text-secondary">~{readMin} min</strong> read
-            </span>
-            {goalProgress >= 0 && (
-              <>
-                <div className="w-px h-3.5 bg-border" />
-                <span className="flex items-center gap-1.5">
-                  <GoalRing progress={goalProgress} goalInfo={goalInfo} />
-                  <strong className="font-medium text-text-secondary">{Math.round(goalProgress * 100)}%</strong> goal
-                </span>
-              </>
-            )}
-          </FloatingBar>
-        )
-      })()}
+      {!focusMode && activeSectionId && !loading && (
+        <FooterStats
+          sectionWords={sectionWordCounts[activeSectionId] ?? 0}
+          totalWords={totalWords}
+          wordsPerPage={settings.wordsPerPage}
+          goalProgress={goalProgress}
+          goalInfo={goalInfo}
+        />
+      )}
 
-      {exportOpen && activeSectionId && editor && (() => {
-        const sectionTitle =
-          findSectionTitle(project?.sections ?? [], activeSectionId) ??
-          findSectionTitle(project?.extras ?? [], activeSectionId) ??
-          findSectionTitle(project?.frontMatter ?? [], activeSectionId) ??
-          findSectionTitle(project?.backMatter ?? [], activeSectionId) ??
-          'Untitled'
-        return (
-          <ExportDialog
-            sectionContext={{ title: sectionTitle, html: editor.getHTML() }}
-            onClose={onCloseExport}
-          />
-        )
-      })()}
+      {exportOpen && activeSectionId && editor && (
+        <ExportDialog
+          sectionContext={{
+            title: findSectionTitle(project?.sections ?? [], activeSectionId)
+              ?? findSectionTitle(project?.extras ?? [], activeSectionId)
+              ?? findSectionTitle(project?.frontMatter ?? [], activeSectionId)
+              ?? findSectionTitle(project?.backMatter ?? [], activeSectionId)
+              ?? 'Untitled',
+            html: editor.getHTML(),
+          }}
+          onClose={onCloseExport}
+        />
+      )}
     </div>
   )
 })

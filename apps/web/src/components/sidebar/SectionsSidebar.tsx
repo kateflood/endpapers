@@ -463,7 +463,7 @@ export default function SectionsSidebar() {
       <div className="flex flex-col flex-1 overflow-hidden">
 
         {/* Single scrollable area */}
-        <div className="flex-1 overflow-y-auto pl-3 pr-1 pt-10">
+        <div className="flex-1 overflow-y-auto pl-3 pr-1 ">
 
           {/* Draft zone */}
           <SidebarZone

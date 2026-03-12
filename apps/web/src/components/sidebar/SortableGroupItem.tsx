@@ -86,7 +86,7 @@ export default function SortableGroupItem({
 
   return (
     <div ref={setNodeRef} style={style}>
-      <div className="group relative flex items-center h-8 gap-1 pl-2 pr-2 cursor-pointer select-none hover:bg-hover">
+      <div className="group/item relative flex items-center h-8 gap-1 pl-2 pr-2 cursor-pointer select-none hover:bg-hover">
         <DragHandle attributes={attributes} listeners={listeners} />
 
         <button
