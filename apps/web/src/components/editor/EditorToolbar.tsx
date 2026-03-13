@@ -14,7 +14,25 @@ import {
   IconBulletList, IconOrderedList, IconBlockquote,
   IconAlignLeft, IconAlignCenter, IconAlignRight,
   IconImage, IconSearch, IconDownload, IconType,
+  IconPalette, IconSubscript, IconSuperscript, IconHorizontalRule, IconMath,
 } from '../shared/icons'
+
+const TEXT_COLORS = [
+  { label: 'Red', value: '#DC2626' },
+  { label: 'Orange', value: '#EA580C' },
+  { label: 'Amber', value: '#D97706' },
+  { label: 'Yellow', value: '#CA8A04' },
+  { label: 'Green', value: '#16A34A' },
+  { label: 'Teal', value: '#0D9488' },
+  { label: 'Blue', value: '#2563EB' },
+  { label: 'Indigo', value: '#4F46E5' },
+  { label: 'Purple', value: '#7C3AED' },
+  { label: 'Pink', value: '#DB2777' },
+  { label: 'Black', value: '#111827' },
+  { label: 'Dark gray', value: '#374151' },
+  { label: 'Gray', value: '#6B7280' },
+  { label: 'Light gray', value: '#9CA3AF' },
+]
 
 export const FONTS = [
   { label: 'Inter', value: 'Inter, sans-serif' },
@@ -125,7 +143,7 @@ export default function EditorToolbar({
 
       {editor && (
         <>
-          {/* Font family + size */}
+          {/* Font family + size + color */}
           {(() => {
             const activeFont = editor.getAttributes('textStyle').fontFamily ?? defaultFont
             const activeFontSize = editor.getAttributes('textStyle').fontSize
@@ -149,6 +167,33 @@ export default function EditorToolbar({
                 >
                   {FONT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button type="button" title="Text color" className={`${btnBase} ${btnInactive}`}>
+                      <IconPalette size={ICON_SIZE} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="p-2 w-auto min-w-0">
+                    <div className="grid grid-cols-7 gap-1">
+                      <DropdownMenuItem
+                        className="w-6 h-6 rounded-sm p-0 flex items-center justify-center border border-border text-text-secondary text-[0.6875rem] font-medium cursor-pointer"
+                        onClick={() => editor.chain().focus().unsetColor().run()}
+                        title="Default color"
+                      >
+                        A
+                      </DropdownMenuItem>
+                      {TEXT_COLORS.map(c => (
+                        <DropdownMenuItem
+                          key={c.value}
+                          className="w-6 h-6 rounded-sm p-0 cursor-pointer"
+                          style={{ backgroundColor: c.value }}
+                          onClick={() => editor.chain().focus().setColor(c.value).run()}
+                          title={c.label}
+                        />
+                      ))}
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )
           })()}
@@ -188,6 +233,48 @@ export default function EditorToolbar({
           {iconBtn(<IconStrike size={ICON_SIZE} />, editor.isActive('strike'), () => editor.chain().focus().toggleStrike().run(), 'Strikethrough')}
           {iconBtn(<IconHighlight size={ICON_SIZE} />, editor.isActive('highlight'), () => editor.chain().focus().toggleHighlight().run(), 'Highlight')}
           {iconBtn(<IconCode size={ICON_SIZE} />, editor.isActive('code'), () => editor.chain().focus().toggleCode().run(), 'Inline code')}
+
+          {/* Subscript / Superscript dropdown */}
+          {(() => {
+            const isSubActive = editor.isActive('subscript')
+            const isSuperActive = editor.isActive('superscript')
+            const isScriptActive = isSubActive || isSuperActive
+            const triggerIcon = isSuperActive ? <IconSuperscript size={ICON_SIZE} /> : <IconSubscript size={ICON_SIZE} />
+            return (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" title="Subscript / Superscript" className={`${btnBase} ${isScriptActive ? btnActive : btnInactive}`}>
+                    {triggerIcon}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[150px]">
+                  <DropdownMenuItem onClick={() => editor.chain().focus().toggleSubscript().run()}>
+                    <IconSubscript size={13} className="mr-2" /> Subscript
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => editor.chain().focus().toggleSuperscript().run()}>
+                    <IconSuperscript size={13} className="mr-2" /> Superscript
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )
+          })()}
+
+          {/* Math dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" title="Insert math" className={`${btnBase} ${btnInactive}`}>
+                <IconMath size={ICON_SIZE} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[150px]">
+              <DropdownMenuItem onClick={() => editor.chain().focus().insertInlineMath({ latex: '' }).run()}>
+                Inline math
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => editor.chain().focus().insertBlockMath({ latex: '' }).run()}>
+                Block math
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {sep}
 
@@ -232,6 +319,11 @@ export default function EditorToolbar({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {sep}
+
+          {/* Horizontal rule */}
+          {iconBtn(<IconHorizontalRule size={ICON_SIZE} />, false, () => editor.chain().focus().setHorizontalRule().run(), 'Horizontal rule')}
 
           {sep}
 

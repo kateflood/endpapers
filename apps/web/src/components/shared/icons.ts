@@ -55,4 +55,9 @@ export {
   Archive as IconArchive,
   Type as IconType,
   PanelRight as IconPanelRight,
+  Palette as IconPalette,
+  Subscript as IconSubscript,
+  Superscript as IconSuperscript,
+  Minus as IconHorizontalRule,
+  Sigma as IconMath,
 } from 'lucide-react'

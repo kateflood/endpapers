@@ -7,7 +7,11 @@ import Image from '@tiptap/extension-image'
 import Underline from '@tiptap/extension-underline'
 import Highlight from '@tiptap/extension-highlight'
 import { TextStyle } from '@tiptap/extension-text-style'
+import { Color } from '@tiptap/extension-color'
 import { FontFamily } from '@tiptap/extension-font-family'
+import Subscript from '@tiptap/extension-subscript'
+import Superscript from '@tiptap/extension-superscript'
+import { Mathematics } from '@tiptap/extension-mathematics'
 import { FontSize } from './fontSizeExtension'
 import { SearchReplace } from './searchExtension'
 import { AIHighlight } from './aiHighlightExtension'
@@ -24,7 +28,11 @@ export function useEditorSetup(): Editor | null {
       Underline,
       Highlight,
       TextStyle,
+      Color,
       FontFamily,
+      Subscript,
+      Superscript,
+      Mathematics.configure({ katexOptions: { throwOnError: false } }),
       FontSize,
     ],
     content: '',
