@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { findSectionTitle, todayISODate, isThisWeek, isThisMonth, sumWritingLog } from '@endpapers/utils'
-import type { WritingLogEntry } from '@endpapers/types'
+import type { WritingLogEntry, WritingGoals } from '@endpapers/types'
 import { useProject, DEMO_RECENT_ID, PREVIEW_RECENT_ID } from '../contexts/ProjectContext'
 import SectionsSidebar from '../components/sidebar/SectionsSidebar'
 import RichTextEditor from '../components/editor/RichTextEditor'
@@ -29,11 +29,10 @@ import {
 type RightPanel = 'goals' | 'ai' | 'spellcheck' | null
 
 function computeGoal(
-  sessionWords: number,
   totalWords: number,
   log: WritingLogEntry[],
   lastKnownTotal: number | undefined,
-  goals: { session?: number; daily?: number; weekly?: number; monthly?: number },
+  goals: WritingGoals,
 ): { progress: number; info: GoalInfo | null } {
   const unlogged = Math.max(0, totalWords - (lastKnownTotal ?? 0))
   const today = todayISODate()
@@ -42,10 +41,10 @@ function computeGoal(
   const weeklyWords = sumWritingLog(log, e => isThisWeek(e.date) && e.date !== today) + dailyWords
   const monthlyWords = sumWritingLog(log, e => isThisMonth(e.date) && e.date !== today) + dailyWords
 
-  if (goals.session && goals.session > 0) return { progress: Math.min(1, sessionWords / goals.session), info: { label: 'Session goal', current: sessionWords, target: goals.session } }
   if (goals.daily && goals.daily > 0) return { progress: Math.min(1, dailyWords / goals.daily), info: { label: 'Daily goal', current: dailyWords, target: goals.daily } }
   if (goals.weekly && goals.weekly > 0) return { progress: Math.min(1, weeklyWords / goals.weekly), info: { label: 'Weekly goal', current: weeklyWords, target: goals.weekly } }
   if (goals.monthly && goals.monthly > 0) return { progress: Math.min(1, monthlyWords / goals.monthly), info: { label: 'Monthly goal', current: monthlyWords, target: goals.monthly } }
+  if (goals.project && goals.project > 0) return { progress: Math.min(1, totalWords / goals.project), info: { label: 'Project goal', current: totalWords, target: goals.project } }
   return { progress: -1, info: null }
 }
 
@@ -160,7 +159,7 @@ function EditorToolbarRow({
 
 export default function EditorScreen() {
   const navigate = useNavigate()
-  const { project, recentId, closeProject, closePreview, restoreFromPreview, activeSectionId, sectionWordCounts, writingLog, sessionStartWords, updateGoals } = useProject()
+  const { project, recentId, closeProject, closePreview, restoreFromPreview, activeSectionId, sectionWordCounts, writingLog, updateGoals } = useProject()
   const editor = useEditorSetup()
   const editorRef = useRef<RichTextEditorHandle>(null)
 
@@ -188,8 +187,10 @@ export default function EditorScreen() {
       .reduce((acc, [, count]) => acc + count, 0),
     [sectionWordCounts, draftSectionIds]
   )
-  const sessionWords = Math.max(0, totalWords - sessionStartWords)
-  const { progress: goalPct, info: goalInfo } = computeGoal(sessionWords, totalWords, writingLog.log, writingLog.lastKnownTotal, writingLog.goals)
+  const { progress: goalPct, info: goalInfo } = useMemo(
+    () => computeGoal(totalWords, writingLog.log, writingLog.lastKnownTotal, writingLog.goals),
+    [totalWords, writingLog.log, writingLog.lastKnownTotal, writingLog.goals]
+  )
 
   const harperEnabled = project?.settings?.harperEnabled ?? false
   const { linter, isReady } = useHarperLinter(harperEnabled)
@@ -381,7 +382,6 @@ export default function EditorScreen() {
                 {rightPanel === 'goals' && (
                   <WritingGoalsPanel
                     writingLog={writingLog}
-                    sessionWords={sessionWords}
                     totalWords={totalWords}
                     onUpdateGoals={updateGoals}
                   />

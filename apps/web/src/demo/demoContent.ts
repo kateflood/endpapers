@@ -120,7 +120,7 @@ export const DEMO_SECTIONS: Record<string, string> = {
 // ── Writing log ──────────────────────────────────────────────────────────────
 
 export const DEMO_WRITING_LOG: WritingLog = {
-  goals: { session: 500, daily: 1000, weekly: 5000 },
+  goals: { daily: 1000, weekly: 5000, project: 80000 },
   log: [
     { date: '2026-02-19', words: 750 },
     { date: '2026-02-20', words: 850 },

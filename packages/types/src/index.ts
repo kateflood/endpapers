@@ -116,7 +116,7 @@ export interface ReferenceManifest {
 // Writing log
 
 export interface WritingGoals {
-  session?: number
+  project?: number
   daily?: number
   weekly?: number
   monthly?: number

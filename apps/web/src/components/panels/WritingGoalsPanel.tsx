@@ -4,7 +4,6 @@ import { todayISODate, isThisWeek, isThisMonth, sumWritingLog } from '@endpapers
 
 interface Props {
   writingLog: WritingLog
-  sessionWords: number
   totalWords: number
   onUpdateGoals: (goals: WritingGoals) => Promise<void>
 }
@@ -74,7 +73,7 @@ function GoalRow({ label, sublabel, current, goal, draft, onDraftChange, onSave 
 // Panel
 // ---------------------------------------------------------------------------
 
-export default function WritingGoalsPanel({ writingLog, sessionWords, totalWords, onUpdateGoals }: Props) {
+export default function WritingGoalsPanel({ writingLog, totalWords, onUpdateGoals }: Props) {
   const { goals, log, lastKnownTotal } = writingLog
   const today = todayISODate()
 
@@ -88,7 +87,7 @@ export default function WritingGoalsPanel({ writingLog, sessionWords, totalWords
 
   // Editable goal drafts (empty string = not set)
   const [drafts, setDrafts] = useState({
-    session: goals.session !== undefined ? String(goals.session) : '',
+    project: goals.project !== undefined ? String(goals.project) : '',
     daily:   goals.daily   !== undefined ? String(goals.daily)   : '',
     weekly:  goals.weekly  !== undefined ? String(goals.weekly)  : '',
     monthly: goals.monthly !== undefined ? String(goals.monthly) : '',
@@ -96,7 +95,7 @@ export default function WritingGoalsPanel({ writingLog, sessionWords, totalWords
 
   useEffect(() => {
     setDrafts({
-      session: goals.session !== undefined ? String(goals.session) : '',
+      project: goals.project !== undefined ? String(goals.project) : '',
       daily:   goals.daily   !== undefined ? String(goals.daily)   : '',
       weekly:  goals.weekly  !== undefined ? String(goals.weekly)  : '',
       monthly: goals.monthly !== undefined ? String(goals.monthly) : '',
@@ -118,7 +117,7 @@ export default function WritingGoalsPanel({ writingLog, sessionWords, totalWords
   return (
     <div>
         {/* Hint when no goals are set */}
-        {goals.session === undefined && goals.daily === undefined && goals.weekly === undefined && goals.monthly === undefined && log.length === 0 && (
+        {goals.project === undefined && goals.daily === undefined && goals.weekly === undefined && goals.monthly === undefined && log.length === 0 && (
           <p className="px-4 pt-3 text-[0.8125rem] text-text-placeholder">
             Set a writing goal to track your progress.
           </p>
@@ -126,13 +125,6 @@ export default function WritingGoalsPanel({ writingLog, sessionWords, totalWords
 
         {/* Goals */}
         <div className="px-4 pt-1">
-          <GoalRow
-            label="Session" sublabel="this session"
-            current={sessionWords} goal={goals.session}
-            draft={drafts.session}
-            onDraftChange={v => setDrafts(d => ({ ...d, session: v }))}
-            onSave={v => saveGoal('session', v)}
-          />
           <GoalRow
             label="Daily" sublabel="today"
             current={dailyWords} goal={goals.daily}
@@ -153,6 +145,13 @@ export default function WritingGoalsPanel({ writingLog, sessionWords, totalWords
             draft={drafts.monthly}
             onDraftChange={v => setDrafts(d => ({ ...d, monthly: v }))}
             onSave={v => saveGoal('monthly', v)}
+          />
+          <GoalRow
+            label="Project" sublabel="total words"
+            current={totalWords} goal={goals.project}
+            draft={drafts.project}
+            onDraftChange={v => setDrafts(d => ({ ...d, project: v }))}
+            onSave={v => saveGoal('project', v)}
           />
         </div>
 
