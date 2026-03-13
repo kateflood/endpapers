@@ -12,9 +12,11 @@ import { FontFamily } from '@tiptap/extension-font-family'
 import Subscript from '@tiptap/extension-subscript'
 import Superscript from '@tiptap/extension-superscript'
 import { Mathematics } from '@tiptap/extension-mathematics'
+import { BubbleMenu } from '@tiptap/extension-bubble-menu'
 import { FontSize } from './fontSizeExtension'
 import { SearchReplace } from './searchExtension'
 import { AIHighlight } from './aiHighlightExtension'
+import { SpellHighlight } from './spellHighlightExtension'
 
 export function useEditorSetup(): Editor | null {
   return useEditor({
@@ -34,6 +36,8 @@ export function useEditorSetup(): Editor | null {
       Superscript,
       Mathematics.configure({ katexOptions: { throwOnError: false } }),
       FontSize,
+      SpellHighlight,
+      BubbleMenu,
     ],
     content: '',
     coreExtensionOptions: {

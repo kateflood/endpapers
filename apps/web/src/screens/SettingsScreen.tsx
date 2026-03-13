@@ -198,6 +198,12 @@ export default function SettingsScreen() {
                 onChange={v => handleUpdate({ spellCheck: v })}
               />
               <SettingRow
+                label="Grammar & spell check"
+                description="Enable the on-device grammar and spell check panel (powered by Harper)."
+                checked={settings.harperEnabled ?? false}
+                onChange={v => handleUpdate({ harperEnabled: v })}
+              />
+              <SettingRow
                 label="Word count"
                 description="Show total word and page count in the header."
                 checked={settings.showWordCount}

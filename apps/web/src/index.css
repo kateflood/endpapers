@@ -58,6 +58,7 @@
 .search-match { background-color: #ffeb3b; border-radius: 2px; }
 .search-current { background-color: #ffa724; border-radius: 2px; }
 .ai-highlight { background-color: rgba(180, 83, 9, 0.15); border-radius: 2px; }
+.spell-error { text-decoration: underline wavy; text-decoration-color: #E53E3E; text-decoration-skip-ink: none; }
 .ai-highlight-caret {
   display: inline-block;
   width: 2px;

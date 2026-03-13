@@ -17,6 +17,7 @@ export interface ProjectSettings {
   backupsEnabled?: boolean          // default false (opt-in)
   backupOnClose?: boolean           // default true (when backups enabled)
   backupRetentionCount?: number     // default 10
+  harperEnabled?: boolean           // opt-in grammar & spell check panel
 }
 
 export interface AuthorInfo {

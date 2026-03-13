@@ -1,8 +1,11 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { EditorContent } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
 import type { Editor } from '@tiptap/core'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
+import { spellHighlightKey } from './spellHighlightExtension'
+import type { SpellLint } from '../panels/SpellCheckPanel'
 import type { SectionManifestEntry, ProjectSettings } from '@endpapers/types'
 import { countWords, estimatePages, findSectionTitle } from '@endpapers/utils'
 import { useProject } from '../../contexts/ProjectContext'
@@ -47,6 +50,8 @@ interface RichTextEditorProps {
   onCloseSearch: () => void
   exportOpen: boolean
   onCloseExport: () => void
+  spellLints?: SpellLint[]
+  onApplySpellFix?: (lint: SpellLint, suggestionIndex: number) => void
 }
 
 /** Map a character offset in editor.getText() output to a ProseMirror position. */
@@ -81,6 +86,11 @@ function textOffsetToPos(doc: ProseMirrorNode, targetOffset: number): number | n
     result = doc.content.size
   }
   return result
+}
+
+/** Map a ProseMirror position to a character offset in editor.getText() output. */
+function posToTextOffset(doc: ProseMirrorNode, pos: number): number {
+  return doc.textBetween(0, Math.min(pos, doc.content.size), '\n\n').length
 }
 
 export interface RichTextEditorHandle {
@@ -192,6 +202,8 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
   onCloseSearch,
   exportOpen,
   onCloseExport,
+  spellLints,
+  onApplySpellFix,
 }, ref) {
   const { project, handle, activeSectionId, sectionWordCounts, updateSectionWordCount } = useProject()
   const { showToast } = useToast()
@@ -230,6 +242,17 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
 
   const activeFileRef = useRef<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Track cursor position reactively so BubbleMenu content stays in sync
+  const [cursorOffset, setCursorOffset] = useState(0)
+  useEffect(() => {
+    if (!editor) return
+    function onSelectionUpdate() {
+      setCursorOffset(posToTextOffset(editor!.state.doc, editor!.state.selection.from))
+    }
+    editor.on('selectionUpdate', onSelectionUpdate)
+    return () => { editor.off('selectionUpdate', onSelectionUpdate) }
+  }, [editor])
 
   // Attach update handler to editor
   useEffect(() => {
@@ -292,6 +315,23 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [activeSectionId, onOpenSearch])
+
+  // Sync spell highlights when lints change
+  useEffect(() => {
+    if (!editor) return
+    if (!spellLints || spellLints.length === 0) {
+      editor.commands.clearSpellHighlights()
+      return
+    }
+    const doc = editor.state.doc
+    const spans = spellLints
+      .map(l => ({
+        from: textOffsetToPos(doc, l.span.start),
+        to: textOffsetToPos(doc, l.span.end),
+      }))
+      .filter((s): s is { from: number; to: number } => s.from !== null && s.to !== null)
+    editor.commands.setSpellHighlights(spans)
+  }, [editor, spellLints])
 
   // Load section when activeSectionId changes; flush any pending save first
   useEffect(() => {
@@ -390,6 +430,41 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
           </div>
         )}
       </div>
+
+      {editor && spellLints && spellLints.length > 0 && (() => {
+        const activeLint = spellLints.find(l => cursorOffset >= l.span.start && cursorOffset <= l.span.end) ?? null
+        return (
+          <BubbleMenu
+            editor={editor}
+            shouldShow={({ state }) => {
+              const { from, to } = state.selection
+              if (from !== to) return false
+              const decos = spellHighlightKey.getState(state)
+              return (decos?.find(from - 1, from + 1).length ?? 0) > 0
+            }}
+          >
+            <div className="bg-surface border border-border rounded-md shadow-md px-3 py-2 text-xs max-w-xs">
+              <p className="text-text-secondary mb-1.5 leading-snug">
+                {activeLint?.message ?? 'Grammar issue'}
+              </p>
+              {activeLint && activeLint.suggestions.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {activeLint.suggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => onApplySpellFix?.(activeLint, i)}
+                      className="px-2 py-0.5 bg-accent/10 text-accent rounded-sm hover:bg-accent/20 transition-colors cursor-pointer"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </BubbleMenu>
+        )
+      })()}
 
       {!focusMode && activeSectionId && !loading && (
         <FooterStats

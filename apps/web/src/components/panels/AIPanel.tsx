@@ -3,26 +3,22 @@ import type { AIBackend } from '@endpapers/types'
 import { setPreferEnhanced } from '../../ai/transformersWorkerClient'
 import { IconSparkles } from '../shared/icons'
 import { actionBtnClass, CenteredState } from './shared'
-import ProofreaderTab from './ProofreaderTab'
 import SummarizerTab from './SummarizerTab'
 import QATab from './QATab'
 
-type AITab = 'proofread' | 'summarize' | 'qa'
+type AITab = 'summarize' | 'qa'
 
 interface AIPanelProps {
   getEditorText: () => string
   aiEnabled: boolean
   aiBackend: AIBackend
   onNavigateSettings: () => void
-  applyCorrection: (startIndex: number, endIndex: number, replacement: string) => void
-  highlightTextRange: (startIndex: number, endIndex: number) => void
-  clearHighlight: () => void
 }
 
 export default function AIPanel({
-  getEditorText, aiEnabled, aiBackend, onNavigateSettings, applyCorrection, highlightTextRange, clearHighlight,
+  getEditorText, aiEnabled, aiBackend, onNavigateSettings,
 }: AIPanelProps) {
-  const [activeTab, setActiveTab] = useState<AITab>('proofread')
+  const [activeTab, setActiveTab] = useState<AITab>('summarize')
 
   // Sync worker model preference when backend changes
   useEffect(() => {
@@ -41,9 +37,6 @@ export default function AIPanel({
       {/* Tab bar */}
       {aiEnabled && (
         <div className="flex items-center gap-1 px-4 py-1.5 shrink-0 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          <button className={tabClass('proofread')} onClick={() => setActiveTab('proofread')}>
-            Proofread
-          </button>
           <button className={tabClass('summarize')} onClick={() => setActiveTab('summarize')}>
             Summarize
           </button>
@@ -59,20 +52,12 @@ export default function AIPanel({
           <CenteredState
             icon={<IconSparkles size={24} className="text-text-placeholder" />}
             title="AI tools are not enabled"
-            subtitle="Enable on-device AI tools to proofread and summarize your writing. Your text never leaves your device."
+            subtitle="Enable on-device AI tools to summarize your writing and answer questions. Your text never leaves your device."
           >
             <button className={actionBtnClass} onClick={onNavigateSettings}>
               Go to Settings
             </button>
           </CenteredState>
-        ) : activeTab === 'proofread' ? (
-          <ProofreaderTab
-            getEditorText={getEditorText}
-            applyCorrection={applyCorrection}
-            highlightTextRange={highlightTextRange}
-            clearHighlight={clearHighlight}
-            backend={aiBackend}
-          />
         ) : activeTab === 'summarize' ? (
           <SummarizerTab getEditorText={getEditorText} backend={aiBackend} />
         ) : (

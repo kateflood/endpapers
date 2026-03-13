@@ -11,7 +11,10 @@ import EditorNav from '../components/editor/EditorNav'
 import { useEditorSetup } from '../components/editor/useEditorSetup'
 import WritingGoalsPanel from '../components/panels/WritingGoalsPanel'
 import AIPanel from '../components/panels/AIPanel'
-import { IconSparkles, IconTarget, IconMaximize, IconPanelLeft } from '../components/shared/icons'
+import SpellCheckPanel from '../components/panels/SpellCheckPanel'
+import type { SpellLint } from '../components/panels/SpellCheckPanel'
+import { useHarperLinter } from '../hooks/useHarperLinter'
+import { IconSparkles, IconTarget, IconMaximize, IconPanelLeft, IconSpellCheck } from '../components/shared/icons'
 import BackupsDialog from '../components/dialogs/BackupsDialog'
 import ConfirmDialog from '../components/dialogs/ConfirmDialog'
 import ToolbarButton from '../components/shared/ToolbarButton'
@@ -23,7 +26,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 
-type RightPanel = 'goals' | 'ai' | null
+type RightPanel = 'goals' | 'ai' | 'spellcheck' | null
 
 function computeGoal(
   sessionWords: number,
@@ -51,6 +54,7 @@ interface EditorToolbarRowProps {
   font: string
   fontSize: number
   aiEnabled: boolean
+  harperEnabled: boolean
   activeSectionId: string | null
   rightPanel: RightPanel
   searchOpen: boolean
@@ -66,6 +70,7 @@ function EditorToolbarRow({
   font,
   fontSize,
   aiEnabled,
+  harperEnabled,
   activeSectionId,
   rightPanel,
   searchOpen,
@@ -77,7 +82,7 @@ function EditorToolbarRow({
   const { toggleSidebar, open } = useSidebar()
   const sidebarOpen = open.includes('left')
 
-  function handleRightPanel(panel: 'goals' | 'ai') {
+  function handleRightPanel(panel: 'goals' | 'ai' | 'spellcheck') {
     const rightIsOpen = open.includes('right')
     if (rightPanel === panel && rightIsOpen) {
       toggleSidebar(['right'])
@@ -118,6 +123,14 @@ function EditorToolbarRow({
 
       {/* Right: panel toggles */}
       <div className="flex items-center gap-0.5 shrink-0 ml-auto">
+        {harperEnabled && (
+          <ToolbarButton
+            icon={<IconSpellCheck size={15} />}
+            title="Grammar & spell check"
+            onClick={() => handleRightPanel('spellcheck')}
+            active={rightPanel === 'spellcheck'}
+          />
+        )}
         {aiEnabled && (
           <ToolbarButton
             icon={<IconSparkles size={15} />}
@@ -178,8 +191,14 @@ export default function EditorScreen() {
   const sessionWords = Math.max(0, totalWords - sessionStartWords)
   const { progress: goalPct, info: goalInfo } = computeGoal(sessionWords, totalWords, writingLog.log, writingLog.lastKnownTotal, writingLog.goals)
 
-  const font = project?.settings?.font ?? 'Inter, sans-serif'
-  const fontSize = project?.settings?.fontSize ?? 16
+  const harperEnabled = project?.settings?.harperEnabled ?? false
+  const { linter, isReady } = useHarperLinter(harperEnabled)
+  const [spellLints, setSpellLints] = useState<SpellLint[]>([])
+
+  // Clear spell lints when the active section changes
+  useEffect(() => {
+    setSpellLints([])
+  }, [activeSectionId])
 
   const activeSectionTitle = activeSectionId
     ? findSectionTitle(project?.sections ?? [], activeSectionId)
@@ -189,8 +208,26 @@ export default function EditorScreen() {
     : null
 
   function handleSetRightPanel(panel: RightPanel) {
-    if (panel === null) editorRef.current?.clearHighlight()
+    if (panel === null) {
+      editorRef.current?.clearHighlight()
+      setSpellLints([])
+    }
     setRightPanel(panel)
+  }
+
+  function handleApplySpellFix(lint: SpellLint, suggestionIndex: number) {
+    const replacement = lint.suggestions[suggestionIndex]
+    editorRef.current?.replaceTextRange(lint.span.start, lint.span.end, replacement)
+    const delta = replacement.length - (lint.span.end - lint.span.start)
+    setSpellLints(prev =>
+      prev
+        .filter(l => l.index !== lint.index)
+        .map(l =>
+          l.span.start >= lint.span.end
+            ? { ...l, span: { start: l.span.start + delta, end: l.span.end + delta } }
+            : l
+        )
+    )
   }
 
   function toggleFocusMode() {
@@ -236,6 +273,8 @@ export default function EditorScreen() {
   const bannerClass = 'flex items-center justify-center px-4 h-8 bg-accent/[0.06] border-b border-border text-[0.8125rem] text-text-secondary shrink-0 gap-2'
   const aiEnabled = project.settings?.aiEnabled ?? false
   const showBackups = project.settings?.backupsEnabled === true && recentId !== PREVIEW_RECENT_ID
+  const font = project.settings?.font ?? 'Inter, sans-serif'
+  const fontSize = project.settings?.fontSize ?? 16
 
   const editorContent = (
     <RichTextEditor
@@ -251,6 +290,7 @@ export default function EditorScreen() {
       onCloseSearch={() => setSearchOpen(false)}
       exportOpen={exportOpen}
       onCloseExport={() => setExportOpen(false)}
+      spellLints={spellLints}
     />
   )
 
@@ -307,6 +347,7 @@ export default function EditorScreen() {
             font={font}
             fontSize={fontSize}
             aiEnabled={aiEnabled}
+            harperEnabled={harperEnabled}
             activeSectionId={activeSectionId}
             rightPanel={rightPanel}
             searchOpen={searchOpen}
@@ -351,15 +392,16 @@ export default function EditorScreen() {
                     aiEnabled={aiEnabled}
                     aiBackend={project.settings?.aiBackend ?? 'auto'}
                     onNavigateSettings={() => navigate('/settings')}
-                    applyCorrection={(start, end, replacement) => {
-                      editorRef.current?.replaceTextRange(start, end, replacement)
-                    }}
-                    highlightTextRange={(start, end) => {
-                      editorRef.current?.highlightTextRange(start, end)
-                    }}
-                    clearHighlight={() => {
-                      editorRef.current?.clearHighlight()
-                    }}
+                  />
+                )}
+                {rightPanel === 'spellcheck' && (
+                  <SpellCheckPanel
+                    key={activeSectionId ?? 'none'}
+                    linter={linter}
+                    isReady={isReady}
+                    getEditorText={() => editorRef.current?.getText() ?? ''}
+                    onLintsChange={setSpellLints}
+                    onApplyFix={handleApplySpellFix}
                   />
                 )}
               </SidebarContent>

@@ -2,33 +2,6 @@
 
 export type ProviderAvailability = 'available' | 'downloadable' | 'unavailable'
 
-// --- Proofreader ---
-
-export interface ProofCorrection {
-  startIndex: number
-  endIndex: number
-  correction: string
-}
-
-export interface ProofResult {
-  corrections: ProofCorrection[]
-}
-
-export interface ProofreaderProvider {
-  readonly id: string
-  readonly label: string
-  readonly description: string
-  checkAvailability(): Promise<ProviderAvailability>
-  run(
-    text: string,
-    callbacks: {
-      onDownloadProgress?: (progress: number) => void
-      onRunning?: () => void
-    },
-  ): Promise<ProofResult>
-  cancel(): void
-}
-
 // --- Q&A ---
 
 export interface QAProvider {
